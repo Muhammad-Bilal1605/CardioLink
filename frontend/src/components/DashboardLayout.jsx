@@ -90,6 +90,10 @@ const DashboardLayout = ({ children, title, role }) => {
   
 
   return (
+
+
+
+    
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar for desktop */}
       <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-red-900 text-white">
