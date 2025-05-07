@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Stethoscope, Users, Calendar, FileText, Clock, ChevronRight, 
   Activity, Heart, AlertCircle, Plus
@@ -6,8 +7,11 @@ import {
 import DashboardLayout from "../DashboardLayout";
 import { useAuthStore } from "../../store/authStore";
 
+
 const DoctorDashboard = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  
   const [appointments, setAppointments] = useState([
     { id: 1, patient: "John Smith", time: "09:00 AM", status: "confirmed", purpose: "Annual checkup" },
     { id: 2, patient: "Emily Johnson", time: "10:30 AM", status: "confirmed", purpose: "Cardiac evaluation" },
@@ -30,6 +34,10 @@ const DoctorDashboard = () => {
     { id: 102, name: "Linda Davis", age: 54, condition: "Arrhythmia", lastVisit: "2 days ago" },
     { id: 103, name: "Michael Lee", age: 70, condition: "Post MI recovery", lastVisit: "1 week ago" }
   ]);
+  
+  const handleViewAllAppointments = () => {
+    navigate("/AppointmentSchedule");
+  };
 
   return (
     <DashboardLayout title="Doctor Dashboard" role="doctor">
@@ -81,7 +89,7 @@ const DoctorDashboard = () => {
       <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-700">Today's Appointments</h3>
-          <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center">
+          <a href="#" onClick={handleViewAllAppointments} className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center">
             View All <ChevronRight className="h-4 w-4 ml-1" />
           </a>
         </div>
@@ -177,7 +185,10 @@ const DoctorDashboard = () => {
             <h3 className="text-lg font-medium text-gray-700">Quick Actions</h3>
           </div>
           <div className="p-6 space-y-4">
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition">
+            <button 
+              onClick={() => navigate("/AppointmentSchedule")}
+              className="w-full flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition"
+            >
               <Plus className="mr-2 h-5 w-5" />
               New Appointment
             </button>

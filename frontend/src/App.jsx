@@ -7,12 +7,20 @@ import DashboardPage from "./pages/DashboardPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import LandingPage from "./pages/LandingPage";
+import AppointmentSchedule from "./components/dashboards/AppointmentSchedule";
+import DoctorPrescriptions from "./components/Prescriptions/DoctorPrescriptions";
+import DoctorReqForMedicalHistory from "./components/MedicalHistory/DoctorReqForMedicalHistory";
+
+
 
 import LoadingSpinner from "./components/LoadingSpinner";
 
 import { Toaster } from "react-hot-toast";
 import { useAuthStore } from "./store/authStore";
 import { useEffect } from "react";
+import DoctorProfile from "./components/Profile/DoctorProfile";
+import DoctorChats from "./components/Chats/DoctorChats";
+import DoctorSetting from "./components/Setting/DoctorSetting";
 
 // protect routes that require authentication
 const ProtectedRoute = ({ children }) => {
@@ -67,6 +75,8 @@ function App() {
           }
         />
         
+        
+        
         <Route
           path='/login'
           element={
@@ -86,7 +96,68 @@ function App() {
               <DashboardPage />
             </ProtectedRoute>
           }
-        />
+        /> 
+
+        {/* Appointment Schedule route */}
+        <Route
+          path='/dashboard/appointments'
+          element={
+          <ProtectedRoute>
+            
+          <AppointmentSchedule />
+          </ProtectedRoute>
+        }
+      />
+
+
+       {/* chat */}
+       <Route
+          path='/Docchat'
+          element={
+          <ProtectedRoute>
+            <DoctorChats/>
+          </ProtectedRoute>
+        }
+      />
+       <Route
+          path='/medicalhistory'
+          element={
+          <ProtectedRoute>
+            <DoctorReqForMedicalHistory/>
+          
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Prescription */}
+      <Route
+          path='/prescriptions/DocPrec'
+          element={
+          <ProtectedRoute>
+          <DoctorPrescriptions/>
+          </ProtectedRoute>
+        }
+      />
+      {/* Prescription */}
+      <Route
+          path="/settings/DoctorSetting"
+          element={
+          <ProtectedRoute>
+          <DoctorSetting/>
+          </ProtectedRoute>
+        }
+      />
+
+
+      {/* profile */}
+      <Route
+          path='/profile'
+          element={
+          <ProtectedRoute>
+            <DoctorProfile/>
+          </ProtectedRoute>
+        }
+      />
 
         {/* Email Verification (public) */}
         <Route 

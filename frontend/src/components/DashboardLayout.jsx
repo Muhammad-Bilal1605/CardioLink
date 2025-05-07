@@ -11,7 +11,9 @@ import {
   Settings, 
   PieChart, 
   User, 
-  Bell
+  Bell,
+  Calendar,FileText,
+  ClipboardList
 } from "lucide-react";
 
 const DashboardLayout = ({ children, title, role }) => {
@@ -33,7 +35,7 @@ const DashboardLayout = ({ children, title, role }) => {
     const baseItems = [
       { name: "Dashboard", href: "/dashboard", icon: <Home className="w-5 h-5" /> },
       { name: "Profile", href: "/profile", icon: <User className="w-5 h-5" /> },
-      { name: "Settings", href: "/settings", icon: <Settings className="w-5 h-5" /> },
+     
     ];
 
     // Add role-specific items
@@ -44,12 +46,15 @@ const DashboardLayout = ({ children, title, role }) => {
           { name: "Users", href: "/users", icon: <Users className="w-5 h-5" /> },
           { name: "Reports", href: "/reports", icon: <PieChart className="w-5 h-5" /> },
         ];
-      case "doctor":
-        return [
-          ...baseItems,
-          { name: "Patients", href: "/patients", icon: <Users className="w-5 h-5" /> },
-          { name: "Appointments", href: "/appointments", icon: <PieChart className="w-5 h-5" /> },
-        ];
+        case "doctor":
+          return [
+            ...baseItems,
+            { name: "MedicalHistory", href: "/medicalhistory", icon: <Users className="w-5 h-5" /> },
+            { name: "Appointments", href: "/dashboard/appointments", icon: <Calendar className="w-5 h-5" /> },
+            { name: "Prescriptions", href: "/prescriptions/DocPrec", icon:  <FileText className="w-5 h-5" /> },
+            {name:"Chat", href:"/Docchat", icon:<ClipboardList className="w-5 h-5" />},
+            { name: "Settings", href: "/settings/DoctorSetting", icon: <Settings className="w-5 h-5" /> },
+          ];
       case "pharmacist":
         return [
           ...baseItems,
@@ -79,11 +84,16 @@ const DashboardLayout = ({ children, title, role }) => {
     }
   };
 
+  
+
+ 
+  
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar for desktop */}
-      <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-blue-900 text-white">
-        <div className="flex items-center justify-center h-20 border-b border-blue-800">
+      <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-red-900 text-white">
+        <div className="flex items-center justify-center h-20 border-b border-red-800">
           <div className="flex items-center">
             <Heart className="text-red-500 h-8 w-8 mr-2" />
             <span className="text-xl font-bold">CardioLink</span>
@@ -102,10 +112,10 @@ const DashboardLayout = ({ children, title, role }) => {
               </Link>
             ))}
           </nav>
-          <div className="p-4 border-t border-blue-800">
+          <div className="p-4 border-t border-gray-800">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="bg-blue-700 rounded-full p-2">
+                <div className="bg-gray-700 rounded-full p-2">
                   <User className="h-5 w-5 text-blue-200" />
                 </div>
               </div>
@@ -213,3 +223,4 @@ const DashboardLayout = ({ children, title, role }) => {
 };
 
 export default DashboardLayout;
+

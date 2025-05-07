@@ -129,6 +129,7 @@ const SignUpPage = () => {
                 <option value="lab_personnel">Lab Personnel</option>
                 <option value="admin">Admin</option>
                 <option value="pharmacist">Pharmacist</option>
+                
               </select>
             </div>
 
