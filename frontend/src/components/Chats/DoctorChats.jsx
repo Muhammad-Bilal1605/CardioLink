@@ -343,34 +343,34 @@ const DoctorChats = () => {
   };
 
   return (
-    <div className="flex h-screen bg-base-200">
+    <div className="flex h-screen bg-gradient-to-br from-base-100 to-base-200 transition-all duration-500">
       {/* Patients sidebar */}
-      <div className="w-80 bg-base-100 flex flex-col border-r border-base-300">
-        <div className="p-4 border-b border-base-300">
+      <div className="w-80 bg-white flex flex-col border-r border-gray-200 shadow-lg">
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <User size={20} />
             <span>Dr. {auth?.user?.name || 'Doctor'}</span>
           </h2>
-          <p className="text-sm text-base-content/70">{auth?.user?.email || 'doctor@example.com'}</p>
+          <p className="text-sm text-white/80">{auth?.user?.email || 'doctor@example.com'}</p>
         </div>
         
         {/* Search box */}
-        <div className="p-4 border-b border-base-300">
+        <div className="p-4 border-b border-gray-200">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-3 text-base-content/50" />
+            <Search size={16} className="absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
               placeholder="Search patients..."
-              className="input input-bordered w-full pl-10"
+              className="input w-full pl-10 bg-gray-50 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-3"
+                className="absolute right-3 top-3 hover:scale-110 transition-transform duration-300"
               >
-                <X size={16} className="text-base-content/50" />
+                <X size={16} className="text-gray-400" />
               </button>
             )}
           </div>
@@ -379,23 +379,23 @@ const DoctorChats = () => {
         {/* Patients list */}
         <div className="overflow-y-auto flex-1">
           {filteredPatients.length === 0 ? (
-            <div className="p-4 text-center text-base-content/70">
+            <div className="p-4 text-center text-gray-500">
               No patients found
             </div>
           ) : (
             filteredPatients.map(patient => (
               <div
                 key={patient.id}
-                className={`p-4 border-b border-base-300 cursor-pointer hover:bg-base-200 ${
-                  currentChat?.id === patient.id ? 'bg-base-200' : ''
+                className={`p-4 border-b border-gray-100 cursor-pointer transition-all duration-300 hover:bg-emerald-50 ${
+                  currentChat?.id === patient.id ? 'bg-emerald-100' : ''
                 }`}
                 onClick={() => selectPatient(patient)}
               >
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div className="avatar">
-                      <div className="w-12 h-12 rounded-full">
-                        <img src={patient.avatar} alt={patient.name} />
+                      <div className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-white">
+                        <img src={patient.avatar} alt={patient.name} className="object-cover" />
                       </div>
                     </div>
                     <StatusIndicator status={patient.status} />
@@ -403,14 +403,16 @@ const DoctorChats = () => {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline">
-                      <h3 className="font-medium truncate">{patient.name}</h3>
-                      <span className="text-xs text-base-content/70">{patient.timestamp}</span>
+                      <h3 className="font-medium truncate text-gray-800">{patient.name}</h3>
+                      <span className="text-xs text-gray-500">{patient.timestamp}</span>
                     </div>
-                    <p className="text-sm truncate text-base-content/70">{patient.lastMessage}</p>
+                    <p className="text-sm truncate text-gray-500">{patient.lastMessage}</p>
                   </div>
                   
                   {patient.unread > 0 && (
-                    <div className="badge badge-primary badge-sm">{patient.unread}</div>
+                    <div className="flex items-center justify-center h-5 w-5 rounded-full bg-emerald-500 text-white text-xs">
+                      {patient.unread}
+                    </div>
                   )}
                 </div>
               </div>
@@ -420,23 +422,23 @@ const DoctorChats = () => {
       </div>
       
       {/* Chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-white">
         {currentChat ? (
           <>
             {/* Chat header */}
-            <div className="bg-base-100 p-4 border-b border-base-300 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 border-b border-gray-200 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="avatar">
-                    <div className="w-10 h-10 rounded-full">
-                      <img src={currentChat.avatar} alt={currentChat.name} />
+                    <div className="w-10 h-10 rounded-full ring-2 ring-white">
+                      <img src={currentChat.avatar} alt={currentChat.name} className="object-cover" />
                     </div>
                   </div>
                   <StatusIndicator status={currentChat.status} />
                 </div>
                 <div>
                   <h3 className="font-medium">{currentChat.name}</h3>
-                  <p className="text-xs text-base-content/70">
+                  <p className="text-xs text-white/80">
                     {currentChat.status === 'online' ? 'Online' : 
                      currentChat.status === 'away' ? 'Away' : 'Last seen recently'}
                   </p>
@@ -446,19 +448,19 @@ const DoctorChats = () => {
               <div className="flex gap-2">
                 <button 
                   onClick={() => initiateCall('audio')}
-                  className="btn btn-circle btn-ghost tooltip"
+                  className="btn btn-circle btn-ghost hover:bg-white/20 transition-all duration-300 tooltip"
                   data-tip="Audio call"
                 >
                   <Phone size={20} />
                 </button>
                 <button 
                   onClick={() => initiateCall('video')}
-                  className="btn btn-circle btn-ghost tooltip"
+                  className="btn btn-circle btn-ghost hover:bg-white/20 transition-all duration-300 tooltip"
                   data-tip="Video call"
                 >
                   <Video size={20} />
                 </button>
-                <button className="btn btn-circle btn-ghost tooltip" data-tip="More options">
+                <button className="btn btn-circle btn-ghost hover:bg-white/20 transition-all duration-300 tooltip" data-tip="More options">
                   <MoreVertical size={20} />
                 </button>
               </div>
@@ -467,63 +469,77 @@ const DoctorChats = () => {
             {/* Messages area */}
             <div 
               ref={chatContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 bg-base-200"
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
             >
               {messages[currentChat.id]?.map((msg, idx) => (
                 <div
                   key={msg.id || idx}
-                  className={`chat ${msg.sender === 'doctor' ? 'chat-end' : 
-                               msg.sender === 'system' ? 'chat-center' : 'chat-start'}`}
+                  className={`flex ${msg.sender === 'doctor' ? 'justify-end' : 
+                               msg.sender === 'system' ? 'justify-center' : 'justify-start'} transition-all duration-300`}
                 >
                   {msg.sender !== 'system' && (
-                    <div className="chat-image avatar">
-                      <div className="w-10 rounded-full">
+                    <div className="avatar mr-2 self-end">
+                      <div className="w-8 rounded-full ring-2 ring-white">
                         <img 
                           src={msg.sender === 'doctor' ? 
                             (auth?.user?.avatar || "/api/placeholder/50/50") : 
                             currentChat.avatar} 
                           alt={msg.sender === 'doctor' ? 'Doctor' : currentChat.name} 
+                          className="object-cover"
                         />
                       </div>
                     </div>
                   )}
                   
-                  <div className={`chat-header text-xs opacity-50 ${msg.sender === 'doctor' ? 'text-right' : ''}`}>
-                    {msg.sender === 'doctor' ? 'You' : 
-                     msg.sender === 'system' ? '' : currentChat.name}
-                    {msg.timestamp && <span className="ml-1">{formatTime(msg.timestamp)}</span>}
+                  <div className={`max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl ${
+                    msg.sender === 'system' ? 'text-center' : ''
+                  }`}>
+                    {msg.sender !== 'system' && (
+                      <div className={`text-xs opacity-70 mb-1 ${
+                        msg.sender === 'doctor' ? 'text-right' : 'text-left'
+                      }`}>
+                        {msg.sender === 'doctor' ? 'You' : currentChat.name}
+                        {msg.timestamp && <span className="ml-1">{formatTime(msg.timestamp)}</span>}
+                      </div>
+                    )}
+                    
+                    {msg.type === 'system' ? (
+                      <div className="inline-block px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-sm">
+                        {msg.text}
+                      </div>
+                    ) : msg.type === 'audio' ? (
+                      <div className={`p-3 rounded-xl ${
+                        msg.sender === 'doctor' ? 
+                        'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 
+                        'bg-gray-200 text-gray-800'
+                      }`}>
+                        <audio controls src={msg.audioUrl} className="max-w-xs"></audio>
+                      </div>
+                    ) : (
+                      <div className={`p-3 rounded-xl ${
+                        msg.sender === 'doctor' ? 
+                        'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 
+                        'bg-gray-200 text-gray-800'
+                      } transition-all duration-300 hover:shadow-md`}>
+                        {msg.text}
+                      </div>
+                    )}
                   </div>
-                  
-                  {msg.type === 'system' ? (
-                    <div className="chat-bubble chat-bubble-info text-center text-sm opacity-80">
-                      {msg.text}
-                    </div>
-                  ) : msg.type === 'audio' ? (
-                    <div className="chat-bubble">
-                      <audio controls src={msg.audioUrl} className="max-w-xs"></audio>
-                    </div>
-                  ) : (
-                    <div className={`chat-bubble ${msg.sender === 'doctor' ? 'chat-bubble-primary' : ''}`}>
-                      {msg.text}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
             
             {/* Message input */}
-            <div className="p-4 bg-base-100 border-t border-base-300">
+            <div className="p-4 bg-white border-t border-gray-200">
               {isRecording ? (
-                <div className="flex items-center justify-between bg-base-200 p-3 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div className="animate-pulse">
-                      <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                    </div>
+                <div className="flex items-center justify-between bg-red-50 p-3 rounded-xl border border-red-100 animate-pulse">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <div className="h-3 w-3 rounded-full bg-red-500"></div>
                     <span>Recording audio message...</span>
                   </div>
                   <button 
                     onClick={stopRecording}
-                    className="btn btn-circle btn-sm btn-ghost"
+                    className="btn btn-circle btn-sm btn-ghost text-red-600 hover:bg-red-100 transition-all duration-300"
                   >
                     <PauseCircle size={20} />
                   </button>
@@ -532,7 +548,7 @@ const DoctorChats = () => {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={startRecording}
-                    className="btn btn-circle btn-ghost" 
+                    className="btn btn-circle btn-ghost hover:bg-emerald-100 text-emerald-600 transition-all duration-300 hover:scale-110" 
                     title="Record audio message"
                   >
                     <Mic size={20} />
@@ -541,7 +557,7 @@ const DoctorChats = () => {
                   <input
                     type="text"
                     placeholder="Type a message..."
-                    className="input input-bordered flex-1"
+                    className="input flex-1 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
@@ -549,7 +565,11 @@ const DoctorChats = () => {
                   
                   <button 
                     onClick={sendMessage}
-                    className={`btn btn-circle ${message.trim() ? 'btn-primary' : 'btn-ghost opacity-50'}`}
+                    className={`btn btn-circle transition-all duration-300 ${
+                      message.trim() ? 
+                      'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' : 
+                      'btn-ghost opacity-50'
+                    } hover:shadow-lg hover:-translate-y-1`}
                     disabled={!message.trim()}
                   >
                     <Send size={20} />
@@ -559,17 +579,31 @@ const DoctorChats = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-br from-gray-50 to-white">
             <div className="avatar placeholder">
-              <div className="bg-base-300 text-base-content rounded-full w-24">
-                <span className="text-3xl"><User size={40} /></span>
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full w-24 h-24 flex items-center justify-center shadow-lg">
+                <User size={40} />
               </div>
             </div>
-            <h3 className="mt-4 text-xl font-medium">Welcome, Dr. {auth?.user?.name || 'Doctor'}</h3>
-            <p className="text-base-content/70 mt-2 max-w-md">
+            <h3 className="mt-6 text-2xl font-bold text-gray-800">Welcome, Dr. {auth?.user?.name || 'Doctor'}</h3>
+            <p className="text-gray-600 mt-3 max-w-md">
               Select a patient from the list to start a conversation.
               You can send messages, voice recordings, and initiate audio/video calls.
             </p>
+            <div className="mt-6 flex gap-4">
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                <Phone size={24} className="text-emerald-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-700">Audio Calls</p>
+              </div>
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                <Video size={24} className="text-emerald-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-700">Video Calls</p>
+              </div>
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                <Mic size={24} className="text-emerald-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-700">Voice Messages</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

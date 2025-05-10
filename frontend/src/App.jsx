@@ -21,7 +21,7 @@ import { useEffect } from "react";
 import DoctorProfile from "./components/Profile/DoctorProfile";
 import DoctorChats from "./components/Chats/DoctorChats";
 import DoctorSetting from "./components/Setting/DoctorSetting";
-
+import { ProfileProvider } from './context/ProfileContext'; 
 // protect routes that require authentication
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();

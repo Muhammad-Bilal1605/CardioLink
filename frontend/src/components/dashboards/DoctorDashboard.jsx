@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "../DashboardLayout";
 import { useAuthStore } from "../../store/authStore";
+import {ProfilePhoto} from "../Profile/ProfilePhoto";
 
 
 const DoctorDashboard = () => {
@@ -40,12 +41,13 @@ const DoctorDashboard = () => {
   };
 
   return (
+    
     <DashboardLayout title="Doctor Dashboard" role="doctor">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome back, Dr. {user?.name}</h2>
         <p className="text-gray-600">Here's your schedule and patient overview for today.</p>
       </div>
-
+      
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
