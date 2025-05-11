@@ -1,3 +1,7 @@
+
+
+
+//currently not used in the project
 // ProfilePhoto.jsx - Add this component to your project
 import { useState } from 'react';
 import { Camera, Loader } from 'lucide-react';

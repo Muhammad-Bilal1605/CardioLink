@@ -34,7 +34,7 @@ const DashboardLayout = ({ children, title, role }) => {
   const getNavItems = () => {
     const baseItems = [
       { name: "Dashboard", href: "/dashboard", icon: <Home className="w-5 h-5" /> },
-      { name: "Profile", href: "/profile", icon: <User className="w-5 h-5" /> },
+      { name: "Profile and Settings", href: "/profile", icon: <User className="w-5 h-5" /> },
      
     ];
 
@@ -53,7 +53,7 @@ const DashboardLayout = ({ children, title, role }) => {
             { name: "Appointments", href: "/dashboard/appointments", icon: <Calendar className="w-5 h-5" /> },
             { name: "Prescriptions", href: "/prescriptions/DocPrec", icon:  <FileText className="w-5 h-5" /> },
             {name:"Chat", href:"/Docchat", icon:<ClipboardList className="w-5 h-5" />},
-            { name: "Settings", href: "/settings/DoctorSetting", icon: <Settings className="w-5 h-5" /> },
+           // { name: "Settings", href: "/settings/DoctorSetting", icon: <Settings className="w-5 h-5" /> },
           ];
       case "pharmacist":
         return [
@@ -96,7 +96,7 @@ const DashboardLayout = ({ children, title, role }) => {
     
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar for desktop */}
-      <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-red-900 text-white">
+      <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-green-900 text-white">
         <div className="flex items-center justify-center h-20 border-b border-red-800">
           <div className="flex items-center">
             <Heart className="text-red-500 h-8 w-8 mr-2" />

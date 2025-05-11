@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Added missing import
 import { useAuthStore } from "../../store/authStore";
-import { X, Search, Plus, FileText, Send, ArrowRight, Check, User, Calendar, Clock, Clipboard, Pill, Users } from 'lucide-react';
+import { X, Search, Plus, FileText, Send, ArrowRight, Check, User, Calendar, Clock, Clipboard, Pill, Users, ChevronLeft } from 'lucide-react';
 
 export default function PrescriptionUI() {
   const { user } = useAuthStore();
@@ -15,6 +16,12 @@ export default function PrescriptionUI() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Added the useNavigate hook from React Router
+  const navigate = useNavigate();
+    
+  // Handle navigation back to dashboard
+  const handleBackToDashboard = () => navigate('/dashboard');
 
   // Simulate loading patients
   useEffect(() => {
@@ -123,7 +130,7 @@ export default function PrescriptionUI() {
 
   // Sidebar menu items
   const menuItems = [
-    
+    // You can add menu items here if needed
   ];
 
   return (
@@ -186,7 +193,15 @@ export default function PrescriptionUI() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-xl font-semibold text-gray-800">Create Prescription</h1>
+            <div className="flex items-center">
+              <button 
+                onClick={handleBackToDashboard}
+                className="mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors group"
+              >
+                <ChevronLeft className="text-gray-600 group-hover:text-emerald-500" size={24} />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-800">Create Prescription</h1>
+            </div>
           </div>
           
           <div className="flex items-center space-x-3">

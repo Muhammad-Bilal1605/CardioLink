@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from "../../store/authStore";
-import { Phone, Video, Mic, Send, MoreVertical, Search, X, PauseCircle, User } from 'lucide-react';
+import { Phone, Video, Mic, Send, MoreVertical, Search, X, PauseCircle, ChevronLeft } from 'lucide-react';
 import io from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 
 // Initialize socket connection
-const socket = io('http://localhost:5000'); // Replace with your actual server URL
+const socket = io('http://localhost:5173'); // Replace with your actual server URL
 
 const DoctorChats = () => {
   const { auth } = useAuthStore();
@@ -16,13 +17,22 @@ const DoctorChats = () => {
   const chatContainerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const navigate = useNavigate();
 
-  // Dummy patients data (in a real app, this would come from your backend)
+  // Doctor profile - using an actual image URL
+  const doctorProfile = {
+    avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
+    name: auth?.user?.name || "Sarah Williams",
+    email: auth?.user?.email || "dr.williams@medconnect.com",
+    specialization: auth?.user?.specialization || "General Medicine"
+  };
+
+  // Patients data with actual image URLs
   const [patients, setPatients] = useState([
     {
       id: 1,
       name: "Sarah Johnson",
-      avatar: "/api/placeholder/50/50",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
       lastMessage: "I'll send you my latest vitals",
       timestamp: "09:45 AM",
       unread: 2,
@@ -31,7 +41,7 @@ const DoctorChats = () => {
     {
       id: 2,
       name: "Michael Chen",
-      avatar: "/api/placeholder/50/50", 
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80", 
       lastMessage: "Thank you for the prescription",
       timestamp: "Yesterday",
       unread: 0,
@@ -40,7 +50,7 @@ const DoctorChats = () => {
     {
       id: 3,
       name: "Lisa Rodriguez",
-      avatar: "/api/placeholder/50/50",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
       lastMessage: "When should I schedule my follow-up?",
       timestamp: "Yesterday",
       unread: 1,
@@ -49,7 +59,7 @@ const DoctorChats = () => {
     {
       id: 4,
       name: "Robert Kim",
-      avatar: "/api/placeholder/50/50",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
       lastMessage: "My fever has reduced",
       timestamp: "Monday",
       unread: 0,
@@ -58,7 +68,7 @@ const DoctorChats = () => {
     {
       id: 5,
       name: "Emma Thompson",
-      avatar: "/api/placeholder/50/50",
+      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
       lastMessage: "Is this medication correct?",
       timestamp: "Sunday",
       unread: 0,
@@ -341,17 +351,41 @@ const DoctorChats = () => {
       <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${statusColors[status]} ring-2 ring-white`}></span>
     );
   };
+  
+  // Handle navigation back to dashboard
+  const handleBackToDashboard = () => {
+    try {
+      navigate('/dashboard');
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback navigation in case the navigate function fails
+      window.location.href = '/dashboard';
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-base-100 to-base-200 transition-all duration-500">
       {/* Patients sidebar */}
       <div className="w-80 bg-white flex flex-col border-r border-gray-200 shadow-lg">
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <User size={20} />
-            <span>Dr. {auth?.user?.name || 'Doctor'}</span>
-          </h2>
-          <p className="text-sm text-white/80">{auth?.user?.email || 'doctor@example.com'}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="avatar">
+              <div className="w-10 h-10 rounded-full ring-2 ring-white">
+                <img src={doctorProfile.avatar} alt="Doctor" className="object-cover" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold">Dr. {doctorProfile.name}</h2>
+              <p className="text-sm text-white/80">{doctorProfile.email}</p>
+            </div>
+            <button 
+              onClick={handleBackToDashboard}
+              className="btn btn-circle btn-sm btn-ghost hover:bg-white/20 transition-all duration-300"
+              title="Back to Dashboard"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          </div>
         </div>
         
         {/* Search box */}
@@ -481,9 +515,7 @@ const DoctorChats = () => {
                     <div className="avatar mr-2 self-end">
                       <div className="w-8 rounded-full ring-2 ring-white">
                         <img 
-                          src={msg.sender === 'doctor' ? 
-                            (auth?.user?.avatar || "/api/placeholder/50/50") : 
-                            currentChat.avatar} 
+                          src={msg.sender === 'doctor' ? doctorProfile.avatar : currentChat.avatar} 
                           alt={msg.sender === 'doctor' ? 'Doctor' : currentChat.name} 
                           className="object-cover"
                         />
@@ -580,12 +612,12 @@ const DoctorChats = () => {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-br from-gray-50 to-white">
-            <div className="avatar placeholder">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full w-24 h-24 flex items-center justify-center shadow-lg">
-                <User size={40} />
+            <div className="avatar">
+              <div className="w-24 h-24 rounded-full ring-4 ring-emerald-100">
+                <img src={doctorProfile.avatar} alt="Doctor" className="object-cover" />
               </div>
             </div>
-            <h3 className="mt-6 text-2xl font-bold text-gray-800">Welcome, Dr. {auth?.user?.name || 'Doctor'}</h3>
+            <h3 className="mt-6 text-2xl font-bold text-gray-800">Welcome, Dr. {doctorProfile.name}</h3>
             <p className="text-gray-600 mt-3 max-w-md">
               Select a patient from the list to start a conversation.
               You can send messages, voice recordings, and initiate audio/video calls.

@@ -58,7 +58,9 @@ function App() {
   if (isCheckingAuth) return <LoadingSpinner />;
 
   return (
+    <ProfileProvider>
     <div className='min-h-screen bg-white'>
+      
       <Routes>
         {/* Landing Page is now the default route */}
         <Route path='/' element={<LandingPage />} />
@@ -197,7 +199,9 @@ function App() {
       </Routes>
       
       <Toaster />
+
     </div>
+    </ProfileProvider>
   );
 }
 
