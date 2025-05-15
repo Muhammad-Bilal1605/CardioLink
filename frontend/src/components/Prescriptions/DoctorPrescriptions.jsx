@@ -162,7 +162,7 @@ export default function PrescriptionUI() {
               {isSidebarOpen && <span className="ml-3 whitespace-nowrap">{item.title}</span>}
             </div>
           ))}
-        </div>
+        </div>  
         
         {/* User Profile */}
         <div className="p-4 border-t border-blue-700">
