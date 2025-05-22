@@ -11,7 +11,16 @@ import AppointmentSchedule from "./components/dashboards/AppointmentSchedule";
 import DoctorPrescriptions from "./components/Prescriptions/DoctorPrescriptions";
 import DoctorReqForMedicalHistory from "./components/MedicalHistory/DoctorReqForMedicalHistory";
 
-
+// EHR related imports
+import EHR from './pages/EHR Pages/EHR';
+import UploadImaging from './pages/Uploading Pages/UploadImaging';
+import UploadLabResults from './pages/Uploading Pages/UploadLabResults';
+import UploadProcedures from './pages/Uploading Pages/UploadProcedures';
+import UploadMedications from './pages/Uploading Pages/UploadMedications';
+import UploadVisits from './pages/Uploading Pages/UploadVisits';
+import UploadHospitalizations from './pages/Uploading Pages/UploadHospitalizations';
+import UploadVitalSigns from './pages/Uploading Pages/UploadVitalSigns';
+import PatientList from './pages/EHR Pages/PatientList';
 
 import LoadingSpinner from "./components/LoadingSpinner";
 
@@ -22,6 +31,7 @@ import DoctorProfile from "./components/Profile/DoctorProfile";
 import DoctorChats from "./components/Chats/DoctorChats";
 import DoctorSetting from "./components/Setting/DoctorSetting";
 import { ProfileProvider } from './context/ProfileContext'; 
+
 // protect routes that require authentication
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -77,8 +87,6 @@ function App() {
           }
         />
         
-        
-        
         <Route
           path='/login'
           element={
@@ -105,12 +113,10 @@ function App() {
           path='/dashboard/appointments'
           element={
           <ProtectedRoute>
-            
-          <AppointmentSchedule />
+            <AppointmentSchedule />
           </ProtectedRoute>
         }
       />
-
 
        {/* chat */}
        <Route
@@ -126,7 +132,6 @@ function App() {
           element={
           <ProtectedRoute>
             <DoctorReqForMedicalHistory/>
-          
           </ProtectedRoute>
         }
       />
@@ -140,7 +145,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      {/* Prescription */}
+      
+      {/* Settings */}
       <Route
           path="/settings/DoctorSetting"
           element={
@@ -150,13 +156,94 @@ function App() {
         }
       />
 
-
       {/* profile */}
       <Route
           path='/profile'
           element={
           <ProtectedRoute>
             <DoctorProfile/>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* EHR Routes - All protected */}
+      <Route
+        path='/patients'
+        element={
+          <ProtectedRoute>
+            <PatientList />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/ehr'
+        element={
+          <ProtectedRoute>
+            <EHR />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-imaging/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadImaging />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-lab-results/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadLabResults />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-procedures/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadProcedures />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-medications/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadMedications />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-visits/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadVisits />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-hospitalizations/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadHospitalizations />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path='/upload-vital-signs/:patientId'
+        element={
+          <ProtectedRoute>
+            <UploadVitalSigns />
           </ProtectedRoute>
         }
       />

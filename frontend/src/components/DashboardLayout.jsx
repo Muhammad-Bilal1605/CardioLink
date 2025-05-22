@@ -49,7 +49,7 @@ const DashboardLayout = ({ children, title, role }) => {
         case "doctor":
           return [
             ...baseItems,
-            { name: "MedicalHistory", href: "/medicalhistory", icon: <Users className="w-5 h-5" /> },
+            { name: "EHR", href: "/patients", icon: <Users className="w-5 h-5" /> },
             { name: "Appointments", href: "/dashboard/appointments", icon: <Calendar className="w-5 h-5" /> },
             { name: "Prescriptions", href: "/prescriptions/DocPrec", icon:  <FileText className="w-5 h-5" /> },
             {name:"Chat", href:"/Docchat", icon:<ClipboardList className="w-5 h-5" />},
