@@ -1,24 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useLocation } from 'react-router-dom';
+import { usePatient } from '../../../../../context/PatientContext';
 import MedicationItem from './MedicationItem';
 
-const CurrentMedications = ({ patientId: propPatientId }) => {
-  const { patientId: urlPatientId } = useParams();
-  const location = useLocation();
-  
-  // Extract patientId from URL query parameters if not available in route params or props
-  const queryParams = new URLSearchParams(location.search);
-  const queryPatientId = queryParams.get('patientId');
-  
-  // Use the prop patientId first, then URL params, then query params
-  const patientId = propPatientId || urlPatientId || queryPatientId;
+const CurrentMedications = () => {
+  const { getActivePatientId } = usePatient();
+  const patientId = getActivePatientId();
   
   // Log patientId for debugging
-  console.log('Medications - Patient ID from props:', propPatientId);
-  console.log('Medications - Patient ID from URL params:', urlPatientId);
-  console.log('Medications - Patient ID from query string:', queryPatientId);
-  console.log('Medications - Using patient ID:', patientId);
+  console.log('Medications - Using patient ID from context:', patientId);
   
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(false);

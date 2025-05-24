@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { 
   FaFileMedical, 
-  FaFilePrescription, 
   FaNotesMedical, 
-  FaUserMd, 
   FaFlask, 
   FaArrowLeft,
   FaDownload,
   FaRegFilePdf,
-  FaRegImage,
   FaPrint,
-  FaXRay
+  FaFileAlt,
+  FaExternalLinkAlt
 } from 'react-icons/fa';
 
 function LabDetails({ lab, onClose }) {
@@ -28,94 +26,122 @@ function LabDetails({ lab, onClose }) {
   };
 
   const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'scheduled':
-        return 'bg-teal-50 text-teal-700 border-teal-200';
+    switch (status.toLowerCase()) {
       case 'completed':
-        return 'bg-cyan-50 text-cyan-700 border-cyan-200';
-      case 'cancelled':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'bg-green-100 text-green-800';
       case 'pending':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default:
-        return 'bg-slate-50 text-slate-700 border-slate-200';
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getFileUrl = (reportUrl) => {
+    if (!reportUrl) return '';
+    
+    // Extract filename from the reportUrl (remove /uploads/ prefix)
+    const filename = reportUrl.replace('/uploads/', '');
+    
+    // Use the dedicated lab file route with URL encoding
+    const encodedFilename = encodeURIComponent(filename);
+    
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/lab-results/file/${encodedFilename}`;
+  };
+
+  const handleViewDocument = () => {
+    if (lab.reportUrl) {
+      const fileUrl = getFileUrl(lab.reportUrl);
+      window.open(fileUrl, '_blank');
+    }
+  };
+
+  const handleDownloadDocument = () => {
+    if (lab.reportUrl) {
+      const fileUrl = getFileUrl(lab.reportUrl);
+      const filename = lab.reportUrl.replace('/uploads/', '');
+      
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
   return (
     <div className="bg-white rounded-xl shadow-lg">
-      <div className="border-b border-slate-200">
+      <div className="border-b border-gray-200">
         <div className="px-6 py-4 flex items-center justify-between">
           <button 
             onClick={onClose}
-            className="inline-flex items-center text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-md transition-colors"
-            aria-label="Back to list"
+            className="inline-flex items-center text-green-600 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md transition-colors"
           >
             <FaArrowLeft className="mr-2" /> Back to list
           </button>
           <div className="flex space-x-3">
             <button 
-              className="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors shadow-sm"
-              aria-label="Print lab results"
+              onClick={() => window.print()}
+              className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors shadow-sm"
             >
               <FaPrint className="mr-2" /> Print
             </button>
+            {lab.reportUrl && (
             <button 
-              className="inline-flex items-center px-4 py-2 bg-sky-600 rounded-lg text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors shadow-sm"
-              aria-label="Download lab results"
+                onClick={handleDownloadDocument}
+                className="inline-flex items-center px-4 py-2 bg-green-600 rounded-lg text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors shadow-sm"
             >
-              <FaDownload className="mr-2" /> Download
+                <FaDownload className="mr-2" /> Download Report
             </button>
+            )}
           </div>
         </div>
         
         {/* Lab Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-sky-50 to-cyan-50 border-t border-b border-slate-200">
+        <div className="px-6 py-5 bg-gradient-to-r from-green-50 to-blue-50 border-t border-b border-gray-200">
           <div className="flex flex-col md:flex-row justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">{lab.testName}</h2>
-              <div className="mt-1 flex items-center text-sm text-slate-600">
+              <h2 className="text-xl font-bold text-gray-900">{lab.testName}</h2>
+              <div className="mt-1 flex items-center text-sm text-gray-600">
                 <span className="font-medium">{formatDate(lab.date)}</span>
                 <span className="mx-2">•</span>
                 <span>{formatTime(lab.date)}</span>
               </div>
             </div>
             <div className="mt-2 md:mt-0 flex items-center">
-              <span className={`px-3 py-1 inline-flex text-sm font-medium rounded-full border ${getStatusBadgeClass(lab.status)}`}>
+              <span className={`px-3 py-1 inline-flex text-sm font-medium rounded-full ${getStatusBadgeClass(lab.status)}`}>
                 {lab.status.charAt(0).toUpperCase() + lab.status.slice(1)}
               </span>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-slate-500 font-medium">Provider:</span>
-              <div className="font-semibold text-slate-900 mt-1">{lab.provider}</div>
+              <span className="text-gray-500 font-medium">Doctor:</span>
+              <div className="font-semibold text-gray-900 mt-1">{lab.doctor}</div>
             </div>
             <div>
-              <span className="text-slate-500 font-medium">Test Type:</span>
-              <div className="font-semibold text-slate-900 mt-1">{lab.type}</div>
+              <span className="text-gray-500 font-medium">Test Type:</span>
+              <div className="font-semibold text-gray-900 mt-1">{lab.testType}</div>
             </div>
-            {lab.followUpDate && (
               <div>
-                <span className="text-slate-500 font-medium">Follow-up Date:</span>
-                <div className="font-semibold text-slate-900 mt-1">{formatDate(lab.followUpDate)}</div>
+              <span className="text-gray-500 font-medium">Facility:</span>
+              <div className="font-semibold text-gray-900 mt-1">{lab.facility}</div>
               </div>
-            )}
           </div>
         </div>
         
         {/* Tab Navigation */}
-        <div className="border-b border-slate-200 bg-white">
+        <div className="border-b border-gray-200 bg-white">
           <nav className="flex -mb-px px-6 overflow-x-auto">
             <button
               className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm focus:outline-none ${
                 activeTab === 'summary'
-                  ? 'border-sky-500 text-sky-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
               onClick={() => setActiveTab('summary')}
-              aria-current={activeTab === 'summary' ? 'page' : undefined}
-              aria-label="View lab summary"
             >
               <div className="flex items-center">
                 <FaNotesMedical className="mr-2" />
@@ -125,12 +151,10 @@ function LabDetails({ lab, onClose }) {
             <button
               className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm focus:outline-none ${
                 activeTab === 'results'
-                  ? 'border-sky-500 text-sky-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
               onClick={() => setActiveTab('results')}
-              aria-current={activeTab === 'results' ? 'page' : undefined}
-              aria-label="View lab results"
             >
               <div className="flex items-center">
                 <FaFlask className="mr-2" />
@@ -139,28 +163,11 @@ function LabDetails({ lab, onClose }) {
             </button>
             <button
               className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm focus:outline-none ${
-                activeTab === 'imaging'
-                  ? 'border-sky-500 text-sky-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-              onClick={() => setActiveTab('imaging')}
-              aria-current={activeTab === 'imaging' ? 'page' : undefined}
-              aria-label="View associated imaging"
-            >
-              <div className="flex items-center">
-                <FaXRay className="mr-2" />
-                Imaging
-              </div>
-            </button>
-            <button
-              className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm focus:outline-none ${
                 activeTab === 'documents'
-                  ? 'border-sky-500 text-sky-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
               onClick={() => setActiveTab('documents')}
-              aria-current={activeTab === 'documents' ? 'page' : undefined}
-              aria-label="View documents"
             >
               <div className="flex items-center">
                 <FaFileMedical className="mr-2" />
@@ -172,31 +179,35 @@ function LabDetails({ lab, onClose }) {
       </div>
 
       {/* Tab Content */}
-      <div className="p-6 bg-slate-50">
+      <div className="p-6 bg-gray-50">
         {activeTab === 'summary' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-6">
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                  <h3 className="text-sm font-semibold text-sky-700">Test Information</h3>
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 bg-green-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-green-700">Test Information</h3>
                 </div>
                 <div className="p-5">
                   <dl className="grid grid-cols-1 gap-4">
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Test Name</dt>
-                      <dd className="mt-1 text-sm text-slate-900">{lab.testName}</dd>
+                      <dt className="text-sm font-medium text-gray-500">Test Name</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{lab.testName}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Test Type</dt>
-                      <dd className="mt-1 text-sm text-slate-900">{lab.type}</dd>
+                      <dt className="text-sm font-medium text-gray-500">Test Type</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{lab.testType}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Provider</dt>
-                      <dd className="mt-1 text-sm text-slate-900">{lab.provider}</dd>
+                      <dt className="text-sm font-medium text-gray-500">Doctor</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{lab.doctor}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">Date & Time</dt>
-                      <dd className="mt-1 text-sm text-slate-900">
+                      <dt className="text-sm font-medium text-gray-500">Facility</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{lab.facility}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Date & Time</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
                         {formatDate(lab.date)} at {formatTime(lab.date)}
                       </dd>
                     </div>
@@ -204,37 +215,37 @@ function LabDetails({ lab, onClose }) {
                 </div>
               </div>
               
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                  <h3 className="text-sm font-semibold text-sky-700">Notes</h3>
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 bg-green-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-green-700">Notes</h3>
                 </div>
                 <div className="p-5">
-                  <p className="text-slate-700 leading-relaxed">{lab.notes || 'No notes recorded.'}</p>
+                  <p className="text-gray-700 leading-relaxed">{lab.notes || 'No notes recorded.'}</p>
                 </div>
               </div>
             </div>
             
             <div className="space-y-6">
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                  <h3 className="text-sm font-semibold text-sky-700">Test Results Overview</h3>
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 bg-green-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-green-700">Test Results Overview</h3>
                 </div>
                 <div className="p-5">
                   {lab.results && lab.results.length > 0 ? (
                     <div className="space-y-4">
                       {lab.results.map((result, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="text-sm font-medium text-slate-700">{result.parameter}</p>
-                            <p className="text-xs text-slate-500">Reference Range: {result.referenceRange}</p>
+                            <p className="text-sm font-medium text-gray-700">{result.parameter}</p>
+                            <p className="text-xs text-gray-500">Reference Range: {result.referenceRange}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium text-slate-900">{result.value} {result.unit}</p>
+                            <p className="text-sm font-medium text-gray-900">{result.value} {result.unit}</p>
                             <span className={`text-xs px-2 py-1 rounded-full ${
                               result.status === 'Normal' ? 'bg-green-100 text-green-800' :
-                              result.status === 'High' ? 'bg-red-100 text-red-800' :
-                              result.status === 'Low' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-orange-100 text-orange-800'
+                              result.status === 'Abnormal' ? 'bg-red-100 text-red-800' :
+                              result.status === 'Critical' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
                             }`}>
                               {result.status}
                             </span>
@@ -243,23 +254,10 @@ function LabDetails({ lab, onClose }) {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-slate-700">No results available.</p>
+                    <p className="text-gray-700">No results available.</p>
                   )}
                 </div>
               </div>
-              
-              {lab.followUpDate && (
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                  <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                    <h3 className="text-sm font-semibold text-sky-700">Follow-up Information</h3>
-                  </div>
-                  <div className="p-5">
-                    <p className="text-slate-700 leading-relaxed">
-                      Follow-up scheduled for {formatDate(lab.followUpDate)}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -267,31 +265,35 @@ function LabDetails({ lab, onClose }) {
         {activeTab === 'results' && (
           <div className="space-y-6">
             {lab.results && lab.results.length > 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                  <h3 className="text-sm font-semibold text-sky-700">Detailed Results</h3>
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 bg-green-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-green-700">Detailed Results</h3>
                 </div>
                 <div className="p-5">
                   <div className="space-y-4">
                     {lab.results.map((result, index) => (
-                      <div key={index} className="flex justify-between items-center p-4 bg-slate-50 rounded-lg">
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm font-medium text-slate-700">{result.parameter}</p>
-                          <p className="text-xs text-slate-500">Reference Range: {result.referenceRange}</p>
-                          {result.notes && (
-                            <p className="text-xs text-slate-600 mt-1">{result.notes}</p>
-                          )}
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">{result.parameter}</h4>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <p><span className="font-medium">Reference Range:</span> {result.referenceRange || 'Not specified'}</p>
+                              <p><span className="font-medium">Unit:</span> {result.unit || 'Not specified'}</p>
+                            </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium text-slate-900">{result.value} {result.unit}</p>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            <div className="text-lg font-bold text-gray-900 mb-1">
+                              {result.value} {result.unit}
+                            </div>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             result.status === 'Normal' ? 'bg-green-100 text-green-800' :
-                            result.status === 'High' ? 'bg-red-100 text-red-800' :
-                            result.status === 'Low' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-orange-100 text-orange-800'
+                              result.status === 'Abnormal' ? 'bg-red-100 text-red-800' :
+                              result.status === 'Critical' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
                           }`}>
                             {result.status}
                           </span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -300,58 +302,9 @@ function LabDetails({ lab, onClose }) {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-slate-500">No results available.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'imaging' && (
-          <div className="space-y-6">
-            {lab.associatedImaging && lab.associatedImaging.length > 0 ? (
-              lab.associatedImaging.map((imaging, index) => (
-                <div key={index} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                  <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                    <h3 className="text-sm font-semibold text-sky-700">{imaging.type}</h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {formatDate(imaging.date)} • {imaging.facility}
-                    </p>
-                  </div>
-                  <div className="p-5">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium text-slate-700">Findings</p>
-                        <p className="text-sm text-slate-600 mt-1">{imaging.findings}</p>
-                      </div>
-                      {imaging.impression && (
-                        <div>
-                          <p className="text-sm font-medium text-slate-700">Impression</p>
-                          <p className="text-sm text-slate-600 mt-1">{imaging.impression}</p>
-                        </div>
-                      )}
-                      {imaging.images && imaging.images.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-slate-700 mb-2">Images</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {imaging.images.map((image, idx) => (
-                              <div key={idx} className="relative aspect-square">
-                                <img
-                                  src={image.url}
-                                  alt={`${imaging.type} image ${idx + 1}`}
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-slate-500">No associated imaging available.</p>
+                <FaFlask className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No results available</h3>
+                <p className="mt-1 text-sm text-gray-500">Test results will appear here once available.</p>
               </div>
             )}
           </div>
@@ -359,38 +312,66 @@ function LabDetails({ lab, onClose }) {
 
         {activeTab === 'documents' && (
           <div className="space-y-6">
-            {lab.documents && lab.documents.length > 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 bg-sky-50 border-b border-slate-200">
-                  <h3 className="text-sm font-semibold text-sky-700">Documents</h3>
+            {lab.reportUrl ? (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 bg-green-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-green-700">Lab Report Document</h3>
                 </div>
                 <div className="p-5">
-                  <div className="space-y-4">
-                    {lab.documents.map((doc, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex items-center">
-                          <FaRegFilePdf className="text-red-500 text-xl mr-3" />
+                      <FaRegFilePdf className="text-red-500 text-2xl mr-4" />
                           <div>
-                            <p className="text-sm font-medium text-slate-700">{doc.name}</p>
-                            <p className="text-xs text-slate-500">
-                              {formatDate(doc.date)} • {doc.size}
+                        <h4 className="text-sm font-medium text-gray-900">Lab Report</h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {lab.reportUrl.split('/').pop().replace(/-\d+/, '')} • PDF Document
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Created: {formatDate(lab.createdAt)}
                             </p>
                           </div>
                         </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleViewDocument}
+                        className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                      >
+                        <FaExternalLinkAlt className="mr-2" />
+                        View
+                      </button>
                         <button
-                          className="inline-flex items-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors text-sm font-medium"
-                          onClick={() => window.open(doc.url, '_blank')}
+                        onClick={handleDownloadDocument}
+                        className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                         >
-                          <FaDownload className="mr-1.5" /> Download
+                        <FaDownload className="mr-2" />
+                        Download
                         </button>
                       </div>
-                    ))}
+                  </div>
+                  
+                  {/* PDF Preview */}
+                  <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden bg-gray-100">
+                    <iframe
+                      src={getFileUrl(lab.reportUrl)}
+                      className="w-full h-96"
+                      title="Lab Report Preview"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div className="hidden p-8 text-center bg-gray-50">
+                      <FaFileAlt className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                      <p className="text-sm text-gray-600">Preview not available. Click "View" to open in new tab.</p>
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-slate-500">No documents available.</p>
+                <FaFileMedical className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No documents available</h3>
+                <p className="mt-1 text-sm text-gray-500">Lab report documents will appear here when available.</p>
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { usePatient } from '../../context/PatientContext';
 
 // Components
 import TabNavigation from '../../components/DoctorComponents/EHR/Hospitalizations/TabNavigation';
@@ -12,8 +13,10 @@ import DocumentsTab from '../../components/DoctorComponents/EHR/Hospitalizations
 import PreviewModal from '../../components/DoctorComponents/EHR/Modals/PreviewModal';
 
 const UploadHospitalizations = () => {
-  const { patientId } = useParams();
   const navigate = useNavigate();
+  const { getActivePatientId } = usePatient();
+  const patientId = getActivePatientId();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [labResults, setLabResults] = useState([]);
@@ -41,6 +44,20 @@ const UploadHospitalizations = () => {
     associatedImaging: [],
     associatedProcedures: []
   });
+
+  // Redirect to patient list if no patient is selected
+  useEffect(() => {
+    if (!patientId) {
+      console.log('No patient selected, redirecting to patient hospitalizations list');
+      navigate('/patient-hospitalizations');
+      return;
+    }
+  }, [patientId, navigate]);
+
+  // Return early if no patient is selected
+  if (!patientId) {
+    return null;
+  }
 
   // Fetch available lab results, imaging, and procedures for this patient
   useEffect(() => {
@@ -161,7 +178,7 @@ const UploadHospitalizations = () => {
       });
 
       if (response.data.success) {
-        navigate(`/patient/${patientId}`);
+        navigate('/patient-hospitalizations');
       }
     } catch (err) {
       setError(err.response?.data?.error || 'An error occurred while uploading the hospitalization record');

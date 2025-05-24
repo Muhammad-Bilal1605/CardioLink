@@ -43,7 +43,7 @@ const DashboardLayout = ({ children, title, role }) => {
       case "admin":
         return [
           ...baseItems,
-          { name: "Users", href: "/users", icon: <Users className="w-5 h-5" /> },
+          { name: "Manage Hospital Requests", href: "/hospital-admin", icon: <Users className="w-5 h-5" /> },
           { name: "Reports", href: "/reports", icon: <PieChart className="w-5 h-5" /> },
         ];
         case "doctor":
@@ -51,6 +51,7 @@ const DashboardLayout = ({ children, title, role }) => {
             ...baseItems,
             { name: "EHR", href: "/patients", icon: <Users className="w-5 h-5" /> },
             { name: "Appointments", href: "/dashboard/appointments", icon: <Calendar className="w-5 h-5" /> },
+            { name: "Upload Visits", href: "/patient-visits", icon: <FileText className="w-5 h-5" /> },
             { name: "Prescriptions", href: "/prescriptions/DocPrec", icon:  <FileText className="w-5 h-5" /> },
             {name:"Chat", href:"/Docchat", icon:<ClipboardList className="w-5 h-5" />},
            // { name: "Settings", href: "/settings/DoctorSetting", icon: <Settings className="w-5 h-5" /> },
@@ -70,14 +71,20 @@ const DashboardLayout = ({ children, title, role }) => {
       case "radiologist":
         return [
           ...baseItems,
-          { name: "Images", href: "/images", icon: <PieChart className="w-5 h-5" /> },
+          { name: "Upload Imaging", href: "/patient-imaging", icon: <PieChart className="w-5 h-5" /> },
           { name: "Reports", href: "/reports", icon: <Users className="w-5 h-5" /> },
         ];
       case "lab-technologist":
         return [
           ...baseItems,
-          { name: "Tests", href: "/tests", icon: <PieChart className="w-5 h-5" /> },
+          { name: "Upload Lab Results", href: "/patient-lab-results", icon: <PieChart className="w-5 h-5" /> },
           { name: "Results", href: "/results", icon: <Users className="w-5 h-5" /> },
+        ];
+      case "hospital-front-desk":
+        return [
+          ...baseItems,
+          { name: "Upload Procedures", href: "/patient-procedures", icon: <ClipboardList className="w-5 h-5" /> },
+          { name: "Upload Hospitalizations", href: "/patient-hospitalizations", icon: <Users className="w-5 h-5" /> },
         ];
       default:
         return baseItems;

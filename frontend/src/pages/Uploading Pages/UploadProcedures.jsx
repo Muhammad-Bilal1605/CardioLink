@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { usePatient } from '../../context/PatientContext';
 
 const UploadProcedures = () => {
-  const { patientId } = useParams();
   const navigate = useNavigate();
+  const { getActivePatientId } = usePatient();
+  const patientId = getActivePatientId();
+
   const [formData, setFormData] = useState({
     procedureName: '',
     date: '',
@@ -20,6 +23,20 @@ const UploadProcedures = () => {
   const [images, setImages] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Redirect to patient list if no patient is selected
+  useEffect(() => {
+    if (!patientId) {
+      console.log('No patient selected, redirecting to patient procedures list');
+      navigate('/patient-procedures');
+      return;
+    }
+  }, [patientId, navigate]);
+
+  // Return early if no patient is selected
+  if (!patientId) {
+    return null;
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,9 +118,9 @@ const UploadProcedures = () => {
         });
         setDocuments([]);
         setImages([]);
-        // Navigate back to patient page after successful upload
+        // Navigate back to patient procedures list after successful upload
         setTimeout(() => {
-          navigate(`/patient/${patientId}`);
+          navigate('/patient-procedures');
         }, 2000);
       }
     } catch (error) {
@@ -362,7 +379,7 @@ const UploadProcedures = () => {
           <div className="flex items-center justify-between pt-4">
             <button
               type="button"
-              onClick={() => navigate(`/patient/${patientId}`)}
+              onClick={() => navigate('/patient-procedures')}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancel

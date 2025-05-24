@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpiresAt: Date,
     verificationToken: String,
     verificationTokenExpiresAt: Date,
-    role: { type: String, required: true, enum: ["admin", "pharmacist", "hospital-admin", "radiologist", "lab-technologist", "doctor"] },
+    role: { type: String, required: true, enum: ["admin", "pharmacist", "hospital-admin", "radiologist", "lab-technologist", "doctor", "hospital-front-desk"] },
   },
   baseOptions
 );

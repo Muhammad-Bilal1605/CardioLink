@@ -5,12 +5,14 @@ import {
   createPatient,
   updatePatient,
   deletePatient,
-  getPatientRecords
+  getPatientRecords,
+  checkEmailExists
 } from '../controllers/patientController.js';
 
 const router = express.Router();
 
 // Patient routes
+router.get('/check-email', checkEmailExists);
 router.get('/search', searchPatients);
 router.get('/:id', getPatientById);
 router.post('/', createPatient);

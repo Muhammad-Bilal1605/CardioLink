@@ -34,23 +34,21 @@ function PatientImaging({ patientId }) {
           timeout: 5000 // 5 second timeout
         });
         
-        console.log('API Response:', response.data);
-        
         if (response.data.success) {
           const formattedImaging = response.data.data.map(img => ({
             id: img._id,
-            date: img.date,
-            provider: img.provider,
+            patientId: img.patientId,
             type: img.type,
-            status: img.status,
+            date: img.date,
             facility: img.facility,
+            doctor: img.doctor,
+            description: img.description,
             findings: img.findings,
-            impression: img.impression,
+            imageUrl: img.imageUrl,
+            status: img.status,
             notes: img.notes,
-            followUpDate: img.followUpDate,
-            documents: img.documents || [],
-            images: img.images || [],
-            associatedLabResults: img.associatedLabResults || []
+            createdAt: img.createdAt,
+            updatedAt: img.updatedAt
           }));
           setImaging(formattedImaging);
           setFilteredImaging(formattedImaging);
@@ -304,7 +302,7 @@ function PatientImaging({ patientId }) {
         </div>
         <div className="flex flex-wrap -mx-2">
           {/* Imaging Type Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
+          <div className="px-2 w-full md:w-1/3 mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Imaging Type</label>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">
               {imagingTypes.map(type => (
@@ -320,25 +318,9 @@ function PatientImaging({ patientId }) {
               ))}
             </div>
           </div>
-          {/* Department Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">
-              {departments.map(dept => (
-                <label key={dept} className="flex items-center space-x-2 text-sm mb-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.department.includes(dept)}
-                    onChange={() => handleFilterChange('department', dept)}
-                    className="form-checkbox h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-                  />
-                  <span className="text-gray-700">{dept}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          
           {/* Imaging Status Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
+          <div className="px-2 w-full md:w-1/3 mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               {imagingStatuses.map(status => (
@@ -355,7 +337,7 @@ function PatientImaging({ patientId }) {
             </div>
           </div>
           {/* Date Range Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
+          <div className="px-2 w-full md:w-1/3 mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               {dateRanges.map(range => (

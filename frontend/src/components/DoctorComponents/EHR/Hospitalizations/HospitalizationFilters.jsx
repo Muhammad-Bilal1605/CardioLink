@@ -91,7 +91,7 @@ function HospitalizationFilters({ onFilterChange }) {
           </button>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Admission Type */}
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
           <div className="flex items-center mb-2">
@@ -112,26 +112,7 @@ function HospitalizationFilters({ onFilterChange }) {
             ))}
           </div>
         </div>
-        {/* Hospital */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-          <div className="flex items-center mb-2">
-            <FaHospital className="mr-2 text-green-600" />
-            <span className="font-medium text-gray-700">Hospital</span>
-          </div>
-          <div className="space-y-1">
-            {hospitals.map(hospital => (
-              <label key={hospital} className="flex items-center space-x-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={filters.hospital.includes(hospital)}
-                  onChange={() => handleFilterChange('hospital', hospital)}
-                  className="form-checkbox h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-                />
-                <span className="text-gray-700">{hospital}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        
         {/* Status */}
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
           <div className="flex items-center mb-2">

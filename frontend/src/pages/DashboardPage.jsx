@@ -5,6 +5,7 @@ import DoctorDashboard from "../components/dashboards/DoctorDashboard";
 import HospitalAdminDashboard from "../components/dashboards/HospitalAdminDashboard";
 import RadiologistDashboard from "../components/dashboards/RadiologistDashboard.jsx";
 import LabTechnologistDashboard from "../components/dashboards/LabTechnologistDashboard";
+import HospitalFrontDeskDashboard from "../components/dashboards/HospitalFrontDeskDashboard";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const DashboardPage = () => {
@@ -32,6 +33,8 @@ const DashboardPage = () => {
       return <RadiologistDashboard />;
     case "lab-technologist":
       return <LabTechnologistDashboard />;
+    case "hospital-front-desk":
+      return <HospitalFrontDeskDashboard />;
     default:
       return <div>Invalid role. Please contact system administrator.</div>;
   }

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { usePatient } from '../../context/PatientContext';
 
 const UploadVisits = () => {
-  const { patientId } = useParams();
   const navigate = useNavigate();
+  const { getActivePatientId } = usePatient();
+  const patientId = getActivePatientId();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [labResults, setLabResults] = useState([]);
@@ -40,6 +43,20 @@ const UploadVisits = () => {
     associatedImaging: [],
     prescribedMedicines: []
   });
+
+  // Redirect to patient list if no patient is selected
+  useEffect(() => {
+    if (!patientId) {
+      console.log('No patient selected, redirecting to patient visits list');
+      navigate('/patient-visits');
+      return;
+    }
+  }, [patientId, navigate]);
+
+  // Return early if no patient is selected
+  if (!patientId) {
+    return null;
+  }
 
   // Fetch available lab results and imaging for this patient
   useEffect(() => {
@@ -227,8 +244,12 @@ const UploadVisits = () => {
         type: formData.type,
         provider: formData.provider,
         reason: formData.reason,
-        status: formData.status
+        status: formData.status,
+        prescribedMedicines: formData.prescribedMedicines
       });
+
+      console.log('Prescribed medicines to send:', formData.prescribedMedicines);
+      console.log('Prescribed medicines count:', formData.prescribedMedicines.length);
 
       // Log the actual FormData contents
       for (let pair of formDataToSend.entries()) {
@@ -242,7 +263,7 @@ const UploadVisits = () => {
       });
 
       if (response.data.success) {
-        navigate(`/patient/${patientId}`);
+        navigate('/patient-visits');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
@@ -630,7 +651,7 @@ const UploadVisits = () => {
         <div className="flex justify-end space-x-4">
           <button
             type="button"
-            onClick={() => navigate(`/patient/${patientId}`)}
+            onClick={() => navigate('/patient-visits')}
             className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
           >
             Cancel

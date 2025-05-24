@@ -31,6 +31,18 @@ function VisitDetails({ visit, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Debug logging for visit data
+  useEffect(() => {
+    if (visit) {
+      console.log('=== VisitDetails Debug ===');
+      console.log('Full visit object:', visit);
+      console.log('Visit prescribed medicines:', visit.prescribedMedicines);
+      console.log('Visit prescribed medicines type:', typeof visit.prescribedMedicines);
+      console.log('Visit prescribed medicines length:', visit.prescribedMedicines?.length);
+      console.log('========================');
+    }
+  }, [visit]);
+
   useEffect(() => {
     const fetchAssociatedData = async () => {
       if (!visit) return;
@@ -41,21 +53,29 @@ function VisitDetails({ visit, onClose }) {
       try {
         console.log('Visit data:', visit);
         console.log('Associated lab results:', visit.associatedLabResults);
+        console.log('Associated imaging:', visit.associatedImaging);
+        console.log('Prescribed medicines:', visit.prescribedMedicines);
 
         // Fetch lab results
         if (visit.associatedLabResults && visit.associatedLabResults.length > 0) {
-          const labPromises = visit.associatedLabResults.map(id => 
-            axios.get(`http://localhost:5000/api/lab-results/${id}`)
-          );
+          const labPromises = visit.associatedLabResults.map(item => {
+            // Handle both string IDs and object IDs
+            const id = typeof item === 'string' ? item : (item._id || item.id);
+            console.log('Lab result ID:', id);
+            return axios.get(`http://localhost:5000/api/lab-results/${id}`);
+          });
           const labResponses = await Promise.all(labPromises);
           setLabResults(labResponses.map(res => res.data.data));
         }
 
         // Fetch imaging results
         if (visit.associatedImaging && visit.associatedImaging.length > 0) {
-          const imagingPromises = visit.associatedImaging.map(id => 
-            axios.get(`http://localhost:5000/api/imaging/${id}`)
-          );
+          const imagingPromises = visit.associatedImaging.map(item => {
+            // Handle both string IDs and object IDs
+            const id = typeof item === 'string' ? item : (item._id || item.id);
+            console.log('Imaging ID:', id);
+            return axios.get(`http://localhost:5000/api/imaging/${id}`);
+          });
           const imagingResponses = await Promise.all(imagingPromises);
           setImagingResults(imagingResponses.map(res => res.data.data));
         }

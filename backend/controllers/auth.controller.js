@@ -6,7 +6,7 @@ import { HospitalAdmin } from "../models/hospital-admin.model.js";
 import { Doctor } from "../models/doctor.model.js";
 import { Radiologist } from "../models/radiologist.model.js";
 import { LabTechnologist } from "../models/lab-technologist.model.js";
-
+import { HospitalFrontDesk } from "../models/hospital-front-desk.model.js";
 
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import {
@@ -27,7 +27,7 @@ export const signup = async (req, res) => {
 		}
 
 		// Ensure the role is valid (from a predefined set of roles)
-		const validRoles = ["admin", "pharmacist", "hospital-admin", "radiologist", "lab-technologist", "doctor"];
+		const validRoles = ["admin", "pharmacist", "hospital-admin", "radiologist", "lab-technologist", "doctor", "hospital-front-desk"];
 		if (!validRoles.includes(role)) {
 			throw new Error("Invalid role provided");
 		}
@@ -64,6 +64,9 @@ export const signup = async (req, res) => {
 				break;
 			case "lab-technologist":
 				user = new LabTechnologist({ email, password: hashedPassword, name, verificationToken, verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+				break;
+			case "hospital-front-desk":
+				user = new HospitalFrontDesk({ email, password: hashedPassword, name, verificationToken, verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000 });
 				break;
 			default:
 				throw new Error("Invalid role provided");
@@ -167,7 +170,6 @@ export const login = async (req, res) => {
 		res.status(400).json({ success: false, message: error.message });
 	}
 };
-
 
 export const logout = async (req, res) => {
 	res.clearCookie("token");

@@ -50,7 +50,8 @@ function PatientVisits({ patientId }) {
             documents: visit.documents || [],
             images: visit.images || [],
             associatedLabResults: visit.associatedLabResults || [],
-            associatedImaging: visit.associatedImaging || []
+            associatedImaging: visit.associatedImaging || [],
+            prescribedMedicines: visit.prescribedMedicines || []
           }));
           setVisits(formattedVisits);
           setFilteredVisits(formattedVisits);

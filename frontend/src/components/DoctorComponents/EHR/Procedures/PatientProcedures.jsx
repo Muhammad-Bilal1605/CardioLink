@@ -38,20 +38,23 @@ function PatientProcedures({ patientId }) {
         if (response.data.success) {
           const formattedProcedures = response.data.data.map(procedure => ({
             id: procedure._id,
+            patientId: procedure.patientId,
+            procedureName: procedure.procedureName,
             date: procedure.date,
-            name: procedure.procedureName,
             hospital: procedure.hospital,
             physician: procedure.physician,
-            type: procedure.type,
-            duration: procedure.duration,
-            anesthesiaType: procedure.anesthesiaType,
-            notes: procedure.findings,
+            indication: procedure.indication,
+            findings: procedure.findings,
+            complications: procedure.complications,
+            followUpPlan: procedure.followUpPlan,
+            documents: procedure.documents || [],
+            images: procedure.images || [],
             status: procedure.status,
-            associatedRecords: {
-              labResults: procedure.associatedLabResults?.length || 0,
-              imagingStudies: procedure.associatedImaging?.length || 0,
-              medications: procedure.associatedMedications?.length || 0
-            }
+            notes: procedure.notes,
+            createdAt: procedure.createdAt,
+            updatedAt: procedure.updatedAt,
+            // Keep some backward compatibility for UI
+            name: procedure.procedureName
           }));
           console.log('Formatted Procedures:', formattedProcedures);
           setProcedures(formattedProcedures);

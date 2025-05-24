@@ -26,3 +26,4 @@ router.put('/:id', uploadFiles, updateVisit);
 router.delete('/:id', deleteVisit);
 
 export default router;
+

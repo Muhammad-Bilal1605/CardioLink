@@ -2,6 +2,32 @@ import Patient from '../models/User.js';
 import Imaging from '../models/Imaging.js';
 import LabResult from '../models/LabResult.js';
 
+// Check if email already exists
+export const checkEmailExists = async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+
+    const existingPatient = await Patient.findOne({ email: email.toLowerCase() });
+    
+    res.status(200).json({
+      success: true,
+      exists: !!existingPatient
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 // Search patients
 export const searchPatients = async (req, res) => {
   try {
@@ -52,13 +78,50 @@ export const getPatientById = async (req, res) => {
 // Create new patient
 export const createPatient = async (req, res) => {
   try {
-    const patient = await Patient.create(req.body);
+    // Check if email already exists
+    const existingPatient = await Patient.findOne({ email: req.body.email?.toLowerCase() });
+    if (existingPatient) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is already registered'
+      });
+    }
+
+    // Convert email to lowercase for consistency
+    const patientData = {
+      ...req.body,
+      email: req.body.email?.toLowerCase()
+    };
+
+    const patient = await Patient.create(patientData);
+    
+    // Remove password from response
+    const patientResponse = patient.toObject();
+    delete patientResponse.password;
+    
     res.status(201).json({
       success: true,
-      data: patient
+      data: patientResponse
     });
   } catch (error) {
-    res.status(400).json({
+    // Handle validation errors more specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: `Validation failed: ${validationErrors.join(', ')}`
+      });
+    }
+    
+    // Handle duplicate key errors (if email has unique index)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is already registered'
+      });
+    }
+    
+    res.status(500).json({
       success: false,
       error: error.message
     });

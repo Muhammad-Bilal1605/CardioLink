@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { usePatient } from '../../context/PatientContext';
 
 const UploadMedications = () => {
-  const { patientId } = useParams();
+  const navigate = useNavigate();
+  const { getActivePatientId } = usePatient();
+  const patientId = getActivePatientId();
+
   const [formData, setFormData] = useState({
     name: '',
     dosage: '',
@@ -18,6 +22,21 @@ const UploadMedications = () => {
   });
   const [message, setMessage] = useState('');
   const [newSideEffect, setNewSideEffect] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Redirect to EHR if no patient is selected
+  useEffect(() => {
+    if (!patientId) {
+      console.log('No patient selected, redirecting to EHR');
+      navigate('/patients');
+      return;
+    }
+  }, [patientId, navigate]);
+
+  // Return early if no patient is selected
+  if (!patientId) {
+    return null;
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,11 +66,13 @@ const UploadMedications = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+    setLoading(true);
 
     if (!patientId) {
       setMessage('Error: No patient ID found');
+      setLoading(false);
       return;
-      }
+    }
 
     try {
       const response = await axios.post('http://localhost:5000/api/medications', {
@@ -61,23 +82,16 @@ const UploadMedications = () => {
 
       if (response.data.success) {
         setMessage('Medication added successfully!');
-        setFormData({
-          name: '',
-          dosage: '',
-          frequency: '',
-          startDate: '',
-          endDate: '',
-          prescribedBy: '',
-          reason: '',
-          status: 'Active',
-          sideEffects: [],
-          notes: ''
-        });
-        setNewSideEffect('');
+        // Navigate back to EHR medications tab after a brief delay
+        setTimeout(() => {
+          navigate('/ehr?tab=medications');
+        }, 1500);
       }
     } catch (error) {
       console.error(error.response || error);
       setMessage(error.response?.data?.message || 'Error adding medication');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -246,12 +260,20 @@ const UploadMedications = () => {
                     />
                   </div>
 
-                  <div className="pt-4">
+                  <div className="pt-4 space-y-3">
                     <button
                       type="submit"
-                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      disabled={loading}
+                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                     >
-                      Add Medication
+                      {loading ? 'Adding Medication...' : 'Add Medication'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/ehr?tab=medications')}
+                      className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Cancel
                     </button>
                   </div>
                 </form>

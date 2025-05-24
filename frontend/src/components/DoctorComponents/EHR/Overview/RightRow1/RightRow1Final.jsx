@@ -541,19 +541,30 @@ const RightRow1 = ({ patientId: propPatientId }) => {
             <div className="mb-3">
               <span className="text-sm text-gray-500">Results:</span>
               <div className="bg-gray-50 p-3 rounded-md text-sm">
-                {Object.entries(lab.results).map(([key, value]) => (
-                  key !== 'comments' ? (
-                    <div key={key} className="flex justify-between border-b border-gray-100 py-1">
-                      <span className="capitalize">{key}:</span>
-                      <span className="font-medium">{value}</span>
+                {lab.results && lab.results.length > 0 ? (
+                  lab.results.map((result, index) => (
+                    <div key={index} className="border-b border-gray-100 last:border-b-0 py-1">
+                      <div className="flex justify-between">
+                        <span className="font-medium">{result.parameter}:</span>
+                        <span>{result.value} {result.unit}</span>
+                      </div>
+                      {result.referenceRange && (
+                        <div className="text-xs text-gray-500">
+                          Reference: {result.referenceRange}
+                        </div>
+                      )}
+                      <div className={`text-xs mt-1 ${
+                        result.status === 'Normal' ? 'text-green-600' :
+                        result.status === 'High' ? 'text-red-600' :
+                        result.status === 'Low' ? 'text-orange-600' :
+                        'text-gray-600'
+                      }`}>
+                        Status: {result.status}
+                      </div>
                     </div>
-                  ) : null
-                ))}
-                {lab.results?.comments && (
-                  <div className="mt-2 text-gray-600">
-                    <span className="font-medium">Comments: </span>
-                    {lab.results.comments}
-                  </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500">No results available</div>
                 )}
               </div>
             </div>

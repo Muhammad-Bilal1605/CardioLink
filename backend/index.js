@@ -33,12 +33,23 @@ app.use(morgan('dev')); // logging middleware
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
+const hospitalsDir = path.join(__dirname, 'uploads', 'hospitals');
+
 if (!fs.existsSync(uploadsDir)) {
   try {
     fs.mkdirSync(uploadsDir, { recursive: true });
     console.log('Created uploads directory at:', uploadsDir);
   } catch (err) {
     console.error('Failed to create uploads directory:', err);
+  }
+}
+
+if (!fs.existsSync(hospitalsDir)) {
+  try {
+    fs.mkdirSync(hospitalsDir, { recursive: true });
+    console.log('Created hospitals directory at:', hospitalsDir);
+  } catch (err) {
+    console.error('Failed to create hospitals directory:', err);
   }
 }
 
@@ -51,6 +62,55 @@ try {
 }
 
 // Serve static files from uploads directory
+console.log('Setting up static file serving...');
+console.log('Uploads directory path:', uploadsDir);
+console.log('Hospitals directory path:', hospitalsDir);
+
+// Add debugging middleware for file requests
+app.use('/uploads', (req, res, next) => {
+  console.log('=====================================');
+  console.log('File request received:', req.url);
+  console.log('Request method:', req.method);
+  console.log('Full request path:', req.path);
+  console.log('Request headers:', req.headers);
+  
+  // Construct the full file path
+  const filePath = path.join(__dirname, 'uploads', req.url);
+  console.log('Looking for file at:', filePath);
+  
+  // Check if file exists
+  if (fs.existsSync(filePath)) {
+    console.log('✓ File exists at:', filePath);
+    const stats = fs.statSync(filePath);
+    console.log('File size:', stats.size, 'bytes');
+    console.log('File modified:', stats.mtime);
+  } else {
+    console.log('✗ File NOT found at:', filePath);
+    
+    // List directory contents for debugging
+    const dirPath = path.dirname(filePath);
+    console.log('Checking directory:', dirPath);
+    
+    if (fs.existsSync(dirPath)) {
+      console.log('Directory exists, contents:');
+      try {
+        const contents = fs.readdirSync(dirPath);
+        contents.forEach(item => {
+          const itemPath = path.join(dirPath, item);
+          const stats = fs.statSync(itemPath);
+          console.log(`  ${stats.isDirectory() ? '[DIR]' : '[FILE]'} ${item} (${stats.size} bytes)`);
+        });
+      } catch (err) {
+        console.log('Error reading directory:', err.message);
+      }
+    } else {
+      console.log('Directory does not exist');
+    }
+  }
+  console.log('=====================================');
+  next();
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/Backend/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -68,6 +128,7 @@ const loadModels = async () => {
     await import("./models/Visit.js");
     await import("./models/VitalSign.js");
     await import("./models/Procedure.js");
+    await import("./models/Hospital.js");
     console.log('Models loaded successfully');
     return true;
   } catch (error) {
@@ -88,6 +149,7 @@ const loadMedicalRoutes = async () => {
     const procedureRoutes = await import("./routes/procedureRoutes.js");
     const medicationRoutes = await import("./routes/medicationRoutes.js");
     const vitalSignRoutes = await import("./routes/vitalSignRoutes.js");
+    const hospitalRoutes = await import("./routes/hospitalRoutes.js");
 
     app.use('/api/patients', patientRoutes.default);
     app.use('/api/imaging', imagingRoutes.default);
@@ -97,6 +159,7 @@ const loadMedicalRoutes = async () => {
     app.use('/api/procedures', procedureRoutes.default);
     app.use('/api/medications', medicationRoutes.default);
     app.use('/api/vital-signs', vitalSignRoutes.default);
+    app.use('/api/hospitals', hospitalRoutes.default);
     
     console.log('Medical routes loaded successfully');
     return true;

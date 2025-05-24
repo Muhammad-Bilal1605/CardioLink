@@ -39,17 +39,21 @@ function PatientLabs({ patientId }) {
         if (response.data.success) {
           const formattedLabs = response.data.data.map(lab => ({
             id: lab._id,
-            date: lab.date,
-            provider: lab.provider,
-            type: lab.type,
-            status: lab.status,
+            patientId: lab.patientId,
             testName: lab.testName,
+            testType: lab.testType,
+            date: lab.date,
+            facility: lab.facility,
+            doctor: lab.doctor,
             results: lab.results,
+            status: lab.status,
             notes: lab.notes,
-            followUpDate: lab.followUpDate,
-            documents: lab.documents || [],
-            images: lab.images || [],
-            associatedImaging: lab.associatedImaging || []
+            reportUrl: lab.reportUrl,
+            createdAt: lab.createdAt,
+            updatedAt: lab.updatedAt,
+            // Keep some backward compatibility for UI
+            type: lab.testType,
+            provider: lab.doctor
           }));
           setLabs(formattedLabs);
           setFilteredLabs(formattedLabs);
@@ -310,7 +314,7 @@ function PatientLabs({ patientId }) {
         </div>
         <div className="flex flex-wrap -mx-2">
           {/* Lab Type Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
+          <div className="px-2 w-full md:w-1/3 mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Lab Type</label>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">
               {labTypes.map(type => (
@@ -326,25 +330,9 @@ function PatientLabs({ patientId }) {
               ))}
             </div>
           </div>
-          {/* Department Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">
-              {departments.map(dept => (
-                <label key={dept} className="flex items-center space-x-2 text-sm mb-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.department.includes(dept)}
-                    onChange={() => handleFilterChange('department', dept)}
-                    className="form-checkbox h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-                  />
-                  <span className="text-gray-700">{dept}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          
           {/* Lab Status Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
+          <div className="px-2 w-full md:w-1/3 mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               {labStatuses.map(status => (
@@ -361,7 +349,7 @@ function PatientLabs({ patientId }) {
             </div>
           </div>
           {/* Date Range Filter */}
-          <div className="px-2 w-full md:w-1/4 mb-4">
+          <div className="px-2 w-full md:w-1/3 mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               {dateRanges.map(range => (

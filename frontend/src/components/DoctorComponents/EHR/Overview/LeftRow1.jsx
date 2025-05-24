@@ -2,17 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useLocation } from 'react-router-dom';
+import { usePatient } from '../../../../context/PatientContext';
 import profileImage from '../../../../images/profile.png';
 
-const LeftRow1 = ({ patientId: propPatientId }) => {
-  const { patientId: urlPatientId } = useParams();
-  const location = useLocation();
-  
-  const queryParams = new URLSearchParams(location.search);
-  const queryPatientId = queryParams.get('patientId');
-  
-  const patientId = propPatientId || urlPatientId || queryPatientId;
+const LeftRow1 = () => {
+  const { getActivePatientId, getActivePatient } = usePatient();
+  const patientId = getActivePatientId();
 
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -21,6 +16,13 @@ const LeftRow1 = ({ patientId: propPatientId }) => {
     const fetchPatientData = async () => {
       if (!patientId) {
         console.error('No patient ID available. Cannot fetch patient data.');
+        return;
+      }
+      
+      // First check if we already have patient data in context
+      const existingPatient = getActivePatient();
+      if (existingPatient) {
+        setPatient(existingPatient);
         return;
       }
       
@@ -41,7 +43,7 @@ const LeftRow1 = ({ patientId: propPatientId }) => {
     };
 
     fetchPatientData();
-  }, [patientId]);
+  }, [patientId, getActivePatient]);
 
   // Calculate age from DOB
   const calculateAge = (dob) => {

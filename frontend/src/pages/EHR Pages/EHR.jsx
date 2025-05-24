@@ -1,7 +1,7 @@
 // src/pages/EHR.jsx
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import LeftRow1 from '../../components/DoctorComponents/EHR/Overview/LeftRow1';
 import LeftRow2 from '../../components/DoctorComponents/EHR/Overview/LeftRow2';
 import RightRow1 from '../../components/DoctorComponents/EHR/Overview/RightRow1/RightRow1Final';
@@ -19,11 +19,14 @@ import PatientHospitalizations from '../../components/DoctorComponents/EHR/Hospi
 import PatientProcedures from '../../components/DoctorComponents/EHR/Procedures/PatientProcedures';
 import PatientLabs from '../../components/DoctorComponents/EHR/Labs/PatientLabs';
 import PatientImaging from '../../components/DoctorComponents/EHR/Imaging/PatientImaging';
+import { ArrowLeft, Menu, X, User, UserCheck, Users, Calendar, Clipboard, FileText, Activity, Upload, Heart } from 'lucide-react';
+import { usePatient } from '../../context/PatientContext';
+
 
 function EHR() {
+  const navigate = useNavigate();
   const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const patientId = queryParams.get('patientId') || '6821e6aaa5a3e127f2caa44c';
+  const { currentPatientId, currentPatient, getActivePatientId, getActivePatient, setActivePatient } = usePatient();
   
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -32,17 +35,52 @@ function EHR() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Get patient ID from context
+  const patientId = getActivePatientId();
+  
   // Log patientId for debugging
-  console.log('EHR - Using patientId:', patientId);
+  console.log('EHR - Using patientId from context:', patientId);
+
+  // Check for tab query parameter
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActivePage(tabParam);
+    }
+  }, [location.search]);
+
+  // Redirect to patient list if no patient is selected
+  useEffect(() => {
+    if (!patientId) {
+      console.log('No patient selected, redirecting to patient list');
+      navigate('/patients');
+      return;
+    }
+  }, [patientId, navigate]);
 
   // Fetch patient data
   useEffect(() => {
     const fetchPatientData = async () => {
+      if (!patientId) return;
+      
+      // First check if we already have patient data in context
+      const existingPatient = getActivePatient();
+      if (existingPatient) {
+        setPatient(existingPatient);
+        setLoading(false);
+        return;
+      }
+      
+      // If not, fetch from API
       try {
         setLoading(true);
         const response = await axios.get(`http://localhost:5000/api/patients/${patientId}`);
         if (response.data.success) {
-          setPatient(response.data.data);
+          const patientData = response.data.data;
+          setPatient(patientData);
+          // Update context with fetched data
+          setActivePatient(patientId, patientData);
         } else {
           setError('Failed to fetch patient data');
         }
@@ -55,7 +93,7 @@ function EHR() {
     };
 
     fetchPatientData();
-  }, [patientId]);
+  }, [patientId, getActivePatient, setActivePatient]);
 
   // Check screen size on mount and window resize
   useEffect(() => {
@@ -101,7 +139,7 @@ function EHR() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen w-full overflow-hidden bg-gray-50">
-      {/* Back to Patient List button */}
+      
       
 
       {/* Mobile Toggle Button */}
@@ -185,10 +223,10 @@ function EHR() {
 
             {/* Right Row 2 (30% / 70%) */}
             <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
-              <div className="w-full lg:w-3/10 bg-green-50 rounded-lg p-2 md:p-3 flex flex-col justify-center items-center shadow-md">
+              <div className="w-full lg:w-[30%] bg-green-50 rounded-lg p-2 md:p-3 flex flex-col justify-center items-center shadow-md">
                 <RightRow2Column1 patientId={patientId} />
               </div>
-              <div className="w-full lg:w-7/10 bg-gray-50 rounded-lg p-2 md:p-4 flex justify-center items-center shadow-md overflow-hidden">
+              <div className="w-full lg:w-[70%] bg-gray-50 rounded-lg p-2 md:p-4 flex justify-center items-center shadow-md overflow-hidden">
                 <RightRow2Column2 patientId={patientId} />
               </div>
             </div>
@@ -268,7 +306,16 @@ function EHR() {
         {activePage === 'medications' && (
           <div className="bg-green-50 rounded-lg p-3 md:p-6 flex justify-center items-center shadow-md w-full">
             <div className="w-full">
-              <h2 className="text-xl font-bold text-green-800 mb-4">Medications</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-green-800">Medications</h2>
+                <button
+                  onClick={() => navigate('/upload-medications')}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Medications
+                </button>
+              </div>
               <CurrentMedications patientId={patientId} />
             </div>
           </div>

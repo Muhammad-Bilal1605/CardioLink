@@ -126,7 +126,8 @@ const SignUpPage = () => {
                 <option value="" disabled>Select your role</option>
                 <option value="doctor">Doctor</option>
                 <option value="radiologist">Radiologist</option>
-                <option value="lab_personnel">Lab Personnel</option>
+                <option value="lab-technologist">Lab Technologist</option>
+                <option value="hospital-front-desk">Hospital Front Desk</option>
                 <option value="admin">Admin</option>
                 <option value="pharmacist">Pharmacist</option>
                 

@@ -55,6 +55,12 @@ const LoginPage = () => {
       icon: <TestTube className="h-5 w-5" />, 
       color: "yellow", 
       description: "Laboratory tests" 
+    },
+    { 
+      id: "hospital-front-desk", 
+      icon: <User className="h-5 w-5" />, 
+      color: "teal", 
+      description: "Front desk services" 
     }
   ];
 
@@ -82,6 +88,10 @@ const LoginPage = () => {
     yellow: {
       bg: "bg-yellow-100", border: "border-yellow-600", text: "text-yellow-600",
       activeBg: "bg-yellow-600", activeText: "text-white"
+    },
+    teal: {
+      bg: "bg-teal-100", border: "border-teal-600", text: "text-teal-600",
+      activeBg: "bg-teal-600", activeText: "text-white"
     }
   };
 

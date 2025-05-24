@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { FaArrowLeft, FaPrint, FaDownload, FaFileAlt, FaImage, FaFileMedical, FaNotesMedical } from 'react-icons/fa';
+import { FaArrowLeft, FaPrint, FaDownload, FaFileAlt, FaImage, FaInfoCircle } from 'react-icons/fa';
 import ImagingStatusBadge from './ImagingStatusBadge';
-import ReportViewer from './ReportViewer';
 
 function ImagingDetails({ imaging, onClose }) {
-  const [activeTab, setActiveTab] = useState('summary');
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -17,18 +15,48 @@ function ImagingDetails({ imaging, onClose }) {
     return new Date(dateString).toLocaleTimeString(undefined, options);
   };
 
-  const getStatusBadgeClass = (status) => {
-    switch (status.toLowerCase()) {
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '';
+    
+    console.log('Original imageUrl from database:', imageUrl);
+    
+    // Extract filename from the imageUrl (remove /uploads/ prefix)
+    const filename = imageUrl.replace('/uploads/', '');
+    console.log('Extracted filename:', filename);
+    
+    // Use the dedicated imaging file route with URL encoding
+    const encodedFilename = encodeURIComponent(filename);
+    console.log('Encoded filename:', encodedFilename);
+    
+    const fullUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/imaging/file/${encodedFilename}`;
+    console.log('Final URL using dedicated route:', fullUrl);
+    
+    return fullUrl;
+  };
+
+  const handleDownload = () => {
+    if (imaging.imageUrl) {
+      const fullUrl = getImageUrl(imaging.imageUrl);
+      console.log('Download URL:', fullUrl);
+      
+      // Extract original filename for download
+      const pathParts = imaging.imageUrl.split('/');
+      const filename = pathParts.pop();
+      
+      const link = document.createElement('a');
+      link.href = fullUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleViewImage = () => {
+    if (imaging.imageUrl) {
+      const fullUrl = getImageUrl(imaging.imageUrl);
+      console.log('View Image URL:', fullUrl);
+      window.open(fullUrl, '_blank');
     }
   };
 
@@ -59,8 +87,9 @@ function ImagingDetails({ imaging, onClose }) {
               Print
             </button>
             <button
-              onClick={() => {/* Handle download */}}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              onClick={handleDownload}
+              disabled={!imaging.imageUrl}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaDownload className="mr-2" />
               Download
@@ -73,59 +102,48 @@ function ImagingDetails({ imaging, onClose }) {
       <div className="border-b border-gray-200">
         <nav className="flex -mb-px">
           <button
-            onClick={() => setActiveTab('summary')}
+            onClick={() => setActiveTab('overview')}
             className={`py-4 px-6 text-sm font-medium border-b-2 ${
-              activeTab === 'summary'
+              activeTab === 'overview'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <FaInfoCircle className="inline-block mr-2" />
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('details')}
+            className={`py-4 px-6 text-sm font-medium border-b-2 ${
+              activeTab === 'details'
                 ? 'border-green-500 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             <FaFileAlt className="inline-block mr-2" />
-            Summary
+            Details
           </button>
           <button
-            onClick={() => setActiveTab('images')}
+            onClick={() => setActiveTab('imaging')}
             className={`py-4 px-6 text-sm font-medium border-b-2 ${
-              activeTab === 'images'
+              activeTab === 'imaging'
                 ? 'border-green-500 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             <FaImage className="inline-block mr-2" />
-            Images
-          </button>
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={`py-4 px-6 text-sm font-medium border-b-2 ${
-              activeTab === 'reports'
-                ? 'border-green-500 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <FaFileMedical className="inline-block mr-2" />
-            Reports
-          </button>
-          <button
-            onClick={() => setActiveTab('notes')}
-            className={`py-4 px-6 text-sm font-medium border-b-2 ${
-              activeTab === 'notes'
-                ? 'border-green-500 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <FaNotesMedical className="inline-block mr-2" />
-            Notes
+            Imaging
           </button>
         </nav>
       </div>
 
       {/* Content */}
       <div className="p-6">
-        {activeTab === 'summary' && (
+        {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Imaging Information</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
                 <dl className="space-y-4">
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Type</dt>
@@ -138,8 +156,8 @@ function ImagingDetails({ imaging, onClose }) {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Provider</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{imaging.provider}</dd>
+                    <dt className="text-sm font-medium text-gray-500">Doctor</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{imaging.doctor}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Facility</dt>
@@ -151,114 +169,120 @@ function ImagingDetails({ imaging, onClose }) {
                       <ImagingStatusBadge status={imaging.status} />
                     </dd>
                   </div>
-                  {imaging.followUpDate && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Follow-up Date</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{formatDate(imaging.followUpDate)}</dd>
-                    </div>
-                  )}
                 </dl>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Findings & Impression</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Findings</h4>
-                    <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{imaging.findings}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Impression</h4>
-                    <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{imaging.impression}</p>
-                  </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Description</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                    {imaging.description || 'No description available.'}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === 'images' && (
+        {activeTab === 'details' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Imaging Studies</h3>
-            {imaging.images && imaging.images.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {imaging.images.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={image.url}
-                      alt={`Imaging study ${index + 1}`}
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">
-                      <button
-                        onClick={() => window.open(image.url, '_blank')}
-                        className="opacity-0 group-hover:opacity-100 text-white bg-green-600 px-4 py-2 rounded-lg text-sm font-medium transition-opacity"
-                      >
-                        View Full Size
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Clinical Findings</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                    {imaging.findings || 'No findings recorded.'}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <p className="text-gray-500">No images available for this study.</p>
-            )}
+              
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Created Date</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {formatDate(imaging.createdAt)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {formatDate(imaging.updatedAt)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Imaging ID</dt>
+                    <dd className="mt-1 text-sm text-gray-900 font-mono">{imaging.id}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Patient ID</dt>
+                    <dd className="mt-1 text-sm text-gray-900 font-mono">{imaging.patientId}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
           </div>
         )}
 
-        {activeTab === 'reports' && (
+        {activeTab === 'imaging' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Imaging Reports</h3>
-            {imaging.documents && imaging.documents.length > 0 ? (
-              <div className="space-y-4">
-                {imaging.documents.map((doc, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">Imaging Study</h3>
+              {imaging.imageUrl && (
+                <button
+                  onClick={handleViewImage}
+                  className="text-green-600 hover:text-green-800 text-sm font-medium"
+                >
+                  View Full Size
+                </button>
+              )}
+            </div>
+            
+            {imaging.imageUrl ? (
+              <div className="relative">
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <img
+                    src={getImageUrl(imaging.imageUrl)}
+                    alt={`${imaging.type} imaging study`}
+                    className="w-full h-auto max-h-96 object-contain mx-auto"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDNIMTlWMUg1VjNIM1Y1SDFWMTlIMTdWMTFIMTlWMTlIMjFWM1oiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTkgN0g3VjlIOVY3WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTUgMTFIMTNWMTNIMTVWMTFaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0xMSAxM0g5VjE1SDExVjEzWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                      e.target.alt = 'Image not available';
+                      e.target.className = 'w-full h-48 object-contain mx-auto opacity-50';
+                    }}
+                  />
+                </div>
+                
+                <div className="mt-4 flex justify-center space-x-4">
+                  <button
+                    onClick={handleViewImage}
+                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                   >
-                    <div className="flex items-center">
-                      <FaFileMedical className="text-green-600 text-xl mr-3" />
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">{doc.title}</h4>
-                        <p className="text-sm text-gray-500">{formatDate(doc.date)}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSelectedReport(doc)}
-                      className="text-green-600 hover:text-green-800 text-sm font-medium"
-                    >
-                      View Report
-                    </button>
-                  </div>
-                ))}
+                    <FaImage className="mr-2" />
+                    View Full Size
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <FaDownload className="mr-2" />
+                    Download
+                  </button>
+                </div>
               </div>
             ) : (
-              <p className="text-gray-500">No reports available for this study.</p>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'notes' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Clinical Notes</h3>
-            {imaging.notes ? (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">{imaging.notes}</p>
+              <div className="text-center py-12">
+                <FaImage className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No imaging available</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  This imaging study does not have any associated images.
+                </p>
               </div>
-            ) : (
-              <p className="text-gray-500">No clinical notes available for this study.</p>
             )}
           </div>
         )}
       </div>
-
-      {/* Report Viewer Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <ReportViewer report={selectedReport} onClose={() => setSelectedReport(null)} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

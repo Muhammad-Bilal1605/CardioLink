@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
 import DashboardLayout from "../DashboardLayout";
-import { Users, Calendar, Hospital, CreditCard, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, Calendar, Hospital, CreditCard, ArrowUp, ArrowDown, FileText, Building2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const HospitalAdminDashboard = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalStaff: 142,
     occupancyRate: 78,
@@ -72,6 +74,39 @@ const HospitalAdminDashboard = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800">Welcome, {user?.name}</h2>
           <p className="text-gray-600">Hospital Administration Dashboard • {new Date().toLocaleDateString()}</p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div 
+            onClick={() => navigate('/hospital-admin')}
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md cursor-pointer transition-shadow duration-200"
+          >
+            <div className="flex items-center">
+              <div className="bg-blue-100 p-3 rounded-full">
+                <Building2 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Hospital Registrations</h3>
+                <p className="text-sm text-gray-600">Manage hospital registration applications</p>
+              </div>
+            </div>
+          </div>
+          
+          <div 
+            onClick={() => navigate('/hospital-registration')}
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md cursor-pointer transition-shadow duration-200"
+          >
+            <div className="flex items-center">
+              <div className="bg-green-100 p-3 rounded-full">
+                <FileText className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Register New Hospital</h3>
+                <p className="text-sm text-gray-600">Submit new hospital registration</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Stats */}
