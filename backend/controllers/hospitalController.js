@@ -3,6 +3,9 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import bcryptjs from 'bcryptjs';
+import { User } from '../models/user.model.js';
+import { HospitalAdmin } from '../models/hospital-admin.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,6 +116,12 @@ export const createHospital = async (req, res) => {
     
     // Parse dot notation from FormData into nested objects
     const hospitalData = parseDotNotation(req.body);
+    
+    // Hash the administrative contact password if provided
+    if (hospitalData.administrativeContact && hospitalData.administrativeContact.password) {
+      console.log('Hashing administrative contact password...');
+      hospitalData.administrativeContact.password = await bcryptjs.hash(hospitalData.administrativeContact.password, 10);
+    }
     
     // Handle uploaded files
     if (req.files) {
@@ -312,6 +321,12 @@ export const updateHospital = async (req, res) => {
     // Parse dot notation from FormData into nested objects
     const updateData = parseDotNotation(req.body);
     
+    // Hash the administrative contact password if provided
+    if (updateData.administrativeContact && updateData.administrativeContact.password) {
+      console.log('Hashing administrative contact password...');
+      updateData.administrativeContact.password = await bcryptjs.hash(updateData.administrativeContact.password, 10);
+    }
+    
     // Handle uploaded files if any
     if (req.files) {
       const documents = {};
@@ -425,6 +440,39 @@ export const updateHospitalStatus = async (req, res) => {
         success: false,
         message: 'Hospital not found'
       });
+    }
+
+    // If hospital is approved, create hospital admin user
+    if (status === 'Approved' && hospital.administrativeContact) {
+      try {
+        const adminEmail = hospital.administrativeContact.emailAddress;
+        
+        // Check if hospital admin user already exists
+        const existingAdmin = await HospitalAdmin.findOne({ email: adminEmail });
+        
+        if (!existingAdmin) {
+          console.log('Creating hospital admin user for approved hospital:', hospital.hospitalName);
+          
+          // Create hospital admin user
+          const hospitalAdmin = new HospitalAdmin({
+            email: hospital.administrativeContact.emailAddress,
+            password: hospital.administrativeContact.password, // Already hashed
+            name: hospital.administrativeContact.fullName,
+            hospitalId: hospital._id,
+            designation: hospital.administrativeContact.designation,
+            isVerified: true
+          });
+          
+          await hospitalAdmin.save();
+          console.log('Hospital admin user created successfully for:', adminEmail);
+        } else {
+          console.log('Hospital admin user already exists for:', adminEmail);
+        }
+      } catch (userCreationError) {
+        console.error('Error creating hospital admin user:', userCreationError);
+        // Don't fail the hospital approval if user creation fails
+        // Just log the error
+      }
     }
     
     res.json({

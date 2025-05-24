@@ -16,7 +16,18 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpiresAt: Date,
     verificationToken: String,
     verificationTokenExpiresAt: Date,
-    role: { type: String, required: true, enum: ["admin", "pharmacist", "hospital-admin", "radiologist", "lab-technologist", "doctor", "hospital-front-desk"] },
+    role: { 
+      type: String, 
+      required: true, 
+      enum: ["admin", "pharmacist", "hospital-admin", "radiologist", "lab-technologist", "doctor", "hospital-front-desk"] 
+    },
+    hospitalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hospital',
+      required: function() {
+        return ['hospital-admin', 'radiologist', 'lab-technologist', 'doctor', 'hospital-front-desk'].includes(this.role);
+      }
+    }
   },
   baseOptions
 );

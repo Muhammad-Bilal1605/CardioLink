@@ -1,5 +1,6 @@
 import Visit from '../models/Visit.js';
 import Patient from '../models/User.js';
+import { User } from '../models/user.model.js';
 import Medication from '../models/Medication.js';
 import multer from 'multer';
 import path from 'path';
@@ -43,6 +44,24 @@ export const createVisit = async (req, res) => {
   try {
     console.log('Received request body:', req.body);
     console.log('Received files:', req.files);
+    console.log('User ID from token:', req.userId);
+
+    // Get the authenticated user information
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Verify user has a hospital ID (required for uploading medical records)
+    if (!user.hospitalId) {
+      return res.status(403).json({
+        success: false,
+        error: 'User must be associated with a hospital to upload medical records'
+      });
+    }
 
     // Extract and validate required fields
     const patientId = req.body.patientId;
@@ -57,7 +76,9 @@ export const createVisit = async (req, res) => {
       date,
       type,
       provider,
-      reason
+      reason,
+      uploadedBy: user._id,
+      hospitalId: user.hospitalId
     });
 
     // Validate required fields
@@ -125,7 +146,9 @@ export const createVisit = async (req, res) => {
           reason: med.reason,
           status: med.status,
           sideEffects: med.sideEffects,
-          notes: med.notes
+          notes: med.notes,
+          uploadedBy: user._id,  // Auto-populate uploadedBy
+          hospitalId: user.hospitalId  // Auto-populate hospitalId
         });
         await medication.save();
         createdMedications.push(medication);
@@ -155,6 +178,8 @@ export const createVisit = async (req, res) => {
 
     const visitData = {
       patientId,
+      hospitalId: user.hospitalId,  // Auto-populate from authenticated user
+      uploadedBy: user._id,         // Auto-populate from authenticated user
       date: visitDate,
       type,
       provider,

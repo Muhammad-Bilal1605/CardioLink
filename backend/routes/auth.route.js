@@ -7,6 +7,9 @@ import {
 	forgotPassword,
 	resetPassword,
 	checkAuth,
+	hospitalAdminLogin,
+	addHospitalPersonnel,
+	getHospitalPersonnel,
 } from "../controllers/auth.controller.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 
@@ -17,6 +20,10 @@ router.get("/check-auth", verifyToken, checkAuth);
 router.post("/signup", signup);
 router.post("/login", login);
 router.post("/logout", logout);
+
+router.post("/hospital-admin-login", hospitalAdminLogin);
+router.post("/add-hospital-personnel", verifyToken, addHospitalPersonnel);
+router.get("/hospital-personnel", verifyToken, getHospitalPersonnel);
 
 router.post("/verify-email", verifyEmail);
 router.post("/forgot-password", forgotPassword);

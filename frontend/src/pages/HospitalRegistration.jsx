@@ -56,6 +56,7 @@ const HospitalRegistration = () => {
       designation: '',
       phoneNumber: '',
       emailAddress: '',
+      password: '',
       idProof: {
         documentType: 'CNIC',
         documentNumber: '',
@@ -222,6 +223,11 @@ const HospitalRegistration = () => {
         if (!formData.administrativeContact.designation) newErrors['administrativeContact.designation'] = 'Designation is required';
         if (!formData.administrativeContact.phoneNumber) newErrors['administrativeContact.phoneNumber'] = 'Admin phone is required';
         if (!formData.administrativeContact.emailAddress) newErrors['administrativeContact.emailAddress'] = 'Admin email is required';
+        if (!formData.administrativeContact.password) {
+          newErrors['administrativeContact.password'] = 'Password is required';
+        } else if (formData.administrativeContact.password.length < 6) {
+          newErrors['administrativeContact.password'] = 'Password must be at least 6 characters long';
+        }
         if (!formData.administrativeContact.idProof.documentNumber) newErrors['administrativeContact.idProof.documentNumber'] = 'ID number is required';
         break;
       
@@ -723,6 +729,24 @@ const HospitalRegistration = () => {
           />
           {errors['administrativeContact.emailAddress'] && <p className="text-red-500 text-sm mt-1">{errors['administrativeContact.emailAddress']}</p>}
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Password *
+          </label>
+          <input
+            type="password"
+            name="administrativeContact.password"
+            value={formData.administrativeContact.password}
+            onChange={handleInputChange}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors['administrativeContact.password'] ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Enter password"
+          />
+          {errors['administrativeContact.password'] && <p className="text-red-500 text-sm mt-1">{errors['administrativeContact.password']}</p>}
+          <p className="text-gray-500 text-sm mt-1">Password will be used for hospital admin login after approval</p>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -1066,6 +1090,7 @@ const HospitalRegistration = () => {
             <div>Designation: {formData.administrativeContact.designation}</div>
             <div>Phone: {formData.administrativeContact.phoneNumber}</div>
             <div>Email: {formData.administrativeContact.emailAddress}</div>
+            <div>Password: {formData.administrativeContact.password ? '✓ Set' : '✗ Not set'}</div>
             <div>ID: {formData.administrativeContact.idProof.documentType} - {formData.administrativeContact.idProof.documentNumber}</div>
           </div>
         </div>

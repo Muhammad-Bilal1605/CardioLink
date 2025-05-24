@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Heart, Hospital, User, Stethoscope, Beaker, ImagePlus, Shield, PieChart, Pill, LineChart, Target, Check, Award, Clock, ArrowRight, Play } from "lucide-react";
+import { Heart, Hospital, User, Stethoscope, Beaker, ImagePlus, Shield, PieChart, Pill, LineChart, Target, Check, Award, Clock, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 function LandingPage() {
   const [activeRole, setActiveRole] = useState(null);
   const [activeTab, setActiveTab] = useState("vision");
   const [isVisible, setIsVisible] = useState({});
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Animation for scroll reveal
   useEffect(() => {
@@ -29,9 +28,15 @@ function LandingPage() {
 
   const roles = {
     hospital: {
-      title: "Hospital",
+      title: "Hospital Portal",
       icon: <Hospital className="h-6 w-6 mb-2 text-emerald-500" />,
+      description: "For hospitals and their personnel including doctors, radiologists, lab technicians, and administrators",
       subRoles: [
+        {
+          name: "Hospital Admin",
+          description: "Manage hospital registration, staff, and overall operations",
+          icon: <Shield className="h-5 w-5 text-emerald-500" />
+        },
         {
           name: "Doctors",
           description: "Manage schedules, conduct virtual appointments, and access patient EHRs",
@@ -48,16 +53,16 @@ function LandingPage() {
           icon: <Beaker className="h-5 w-5 text-emerald-500" />
         },
         {
-          name: "Hospital Admin",
-          description: "Manage hospital staff, resources, and overall operations",
-          icon: <Shield className="h-5 w-5 text-emerald-500" />
+          name: "Front Desk Staff",
+          description: "Manage patient appointments, registrations, and front desk operations",
+          icon: <User className="h-5 w-5 text-emerald-500" />
         }
       ]
     },
     admin: {
       title: "System Admin",
       icon: <PieChart className="h-6 w-6 mb-2 text-emerald-500" />,
-      description: "Access comprehensive analytics, system configuration, and platform management"
+      description: "Access comprehensive analytics, system configuration, hospital approvals, and platform management"
     },
     pharmacist: {
       title: "Pharmacist",
@@ -132,32 +137,6 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans overflow-x-hidden">
-      {/* Video Modal */}
-      {isVideoModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl">
-            <button 
-              onClick={() => setIsVideoModalOpen(false)}
-              className="absolute -top-10 right-0 text-white hover:text-emerald-400 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="aspect-w-16 aspect-h-9 bg-black">
-              <iframe 
-                className="w-full h-96 md:h-[32rem]"
-                src="https://www.youtube.com/embed/7e90gBu4pas?autoplay=1" 
-                title="CardioLink Platform Demo"
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-              ></iframe>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header & Hero Section */}
       <div className="bg-gradient-to-br from-green-900 to-emerald-800 relative overflow-hidden">
         {/* Animated background elements */}
@@ -174,20 +153,6 @@ function LandingPage() {
               <Heart className="text-red-400 h-8 w-8 animate-pulse" />
               <span className="text-2xl font-bold text-white">CardioLink</span>
             </div>
-            <div className="flex space-x-4">
-              <Link
-                to="/login"
-                className="bg-transparent border border-white text-white px-4 py-2 rounded-lg hover:bg-white hover:text-green-800 transition-all duration-300 flex items-center"
-              >
-                Login <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-              <Link
-                to="/signup"
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center"
-              >
-                Sign Up <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
           </nav>
 
           {/* Hero Content */}
@@ -199,103 +164,100 @@ function LandingPage() {
               <h1 className="text-5xl font-bold mb-6 text-white leading-tight">
                 Revolutionizing <span className="text-red-400">Cardiac Care</span> Through Digital Transformation
               </h1>
-              <p className="text-xl text-gray-100 mb-8 opacity-90">
-                CardioLink connects hospitals, doctors, radiologists, lab personnel, and pharmacists 
-                on a single platform for seamless cardiac care management and improved patient outcomes.
+              <p className="text-xl text-emerald-100 mb-8 leading-relaxed">
+                Connect hospitals, doctors, radiologists, lab technicians, and pharmacists in one integrated platform for seamless cardiac care coordination.
               </p>
-              <div className="flex gap-4 flex-wrap">
-                <Link
-                  to="/signup"
-                  className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center"
-                >
-                  Get Started <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-                <button
-                  onClick={() => setIsVideoModalOpen(true)}
-                  className="bg-transparent border border-white text-white px-6 py-3 rounded-lg hover:bg-white hover:text-green-800 transition-all duration-300 font-semibold text-lg flex items-center"
-                >
-                  <Play className="mr-2 h-5 w-5" /> Watch Demo
-                </button>
-              </div>
               
-              {/* Trust indicators */}
-              <div className="mt-12 flex flex-wrap items-center gap-6">
-                <div className="flex items-center">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                      <img 
-                        key={i}
-                        src={`https://randomuser.me/api/portraits/${i % 2 === 0 ? 'women' : 'men'}/${i*10}.jpg`}
-                        className="w-10 h-10 rounded-full border-2 border-white"
-                        alt="User"
-                      />
+              {/* Role-based Access Buttons */}
+              <div className="space-y-4 mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4">Choose Your Access Portal:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {Object.entries(roles).map(([key, role]) => (
+                    <div
+                      key={key}
+                      className="bg-white/10 backdrop-blur-sm rounded-lg p-4 hover:bg-white/20 transition-all duration-300 cursor-pointer border border-white/20"
+                      onClick={() => setActiveRole(activeRole === key ? null : key)}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        {role.icon}
+                        <h4 className="text-white font-semibold mb-2">{role.title}</h4>
+                        <p className="text-emerald-100 text-sm">{role.description}</p>
+                        
+                        {key === 'hospital' && (
+                          <div className="mt-3 space-y-2 w-full">
+                            <Link
+                              to="/hospital-registration"
+                              className="block w-full bg-emerald-600 text-white px-3 py-2 rounded-md text-sm hover:bg-emerald-700 transition-colors"
+                            >
+                              Register Hospital
+                            </Link>
+                            <Link
+                              to="/hospital-login"
+                              className="block w-full bg-transparent border border-white text-white px-3 py-2 rounded-md text-sm hover:bg-white hover:text-emerald-800 transition-colors"
+                            >
+                              Hospital Login
+                            </Link>
+                          </div>
+                        )}
+                        
+                        {(key === 'admin' || key === 'pharmacist') && (
+                          <div className="mt-3 space-y-2 w-full">
+                            <Link
+                              to={key === 'admin' ? '/admin-login' : '/pharmacist-login'}
+                              className="block w-full bg-transparent border border-white text-white px-3 py-2 rounded-md text-sm hover:bg-white hover:text-emerald-800 transition-colors"
+                            >
+                              Login
+                            </Link>
+                            <Link
+                              to={`/signup?role=${key}`}
+                              className="block w-full bg-emerald-600 text-white px-3 py-2 rounded-md text-sm hover:bg-emerald-700 transition-colors"
+                            >
+                              Sign Up
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Expanded Role Information */}
+              {activeRole === 'hospital' && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 mt-6 border border-white/20">
+                  <h4 className="text-white font-semibold mb-4">Hospital Portal Features:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {roles.hospital.subRoles.map((subRole, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        {subRole.icon}
+                        <div>
+                          <h5 className="text-emerald-200 font-medium">{subRole.name}</h5>
+                          <p className="text-emerald-100 text-sm">{subRole.description}</p>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                  <span className="ml-3 text-white font-medium">Trusted by 500+ professionals</span>
                 </div>
-              </div>
+              )}
             </div>
-            
-            <div className="md:w-1/2 flex justify-center animate-floatUp">
-              <div className="relative w-full max-w-md">
-                {/* Floating card mockups */}
-                <div className="absolute -top-8 -left-8 w-64 h-80 bg-white rounded-xl shadow-2xl transform rotate-6 overflow-hidden border border-gray-200">
-                  <div className="h-8 bg-gray-100 flex items-center px-3">
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="h-48 bg-gradient-to-br from-emerald-100 to-blue-100 rounded-lg mb-3 flex items-center justify-center">
-                      <Heart className="h-16 w-16 text-emerald-500 animate-pulse" />
-                    </div>
-                    <div className="h-3 bg-gray-200 rounded-full mb-2 w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded-full mb-2 w-1/2"></div>
-                  </div>
-                </div>
-                
-                <div className="absolute -bottom-8 -right-8 w-64 h-80 bg-white rounded-xl shadow-2xl transform -rotate-6 overflow-hidden border border-gray-200 z-10">
-                  <div className="h-8 bg-gray-100 flex items-center px-3">
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg mb-3 flex items-center justify-center">
-                      <Stethoscope className="h-16 w-16 text-blue-500" />
-                    </div>
-                    <div className="h-3 bg-gray-200 rounded-full mb-2 w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded-full mb-2 w-1/2"></div>
-                  </div>
-                </div>
-                
-                {/* Center heart animation */}
-                <div className="relative z-20 w-64 h-64 mx-auto">
-                  <div className="absolute inset-0 bg-red-500 rounded-full opacity-20 animate-pulse"></div>
-                  <div className="absolute inset-4 bg-emerald-500 rounded-full opacity-20 animate-pulse"></div>
-                  <div className="absolute inset-8 bg-green-900 rounded-full opacity-10 animate-pulse"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Heart className="text-red-400 h-32 w-32 animate-heartbeat" />
-                  </div>
+
+            {/* Hero Image/Video */}
+            <div className="md:w-1/2 relative">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-lg filter blur-3xl opacity-30 animate-pulse"></div>
+                <div className="relative z-10 rounded-lg shadow-2xl border border-white/20 overflow-hidden bg-black">
+                  <iframe 
+                    className="w-full h-64 md:h-80 lg:h-96"
+                    src="https://www.youtube.com/embed/7e90gBu4pas?rel=0&modestbranding=1&showinfo=0&controls=1&autoplay=0" 
+                    title="CardioLink Platform Demo"
+                    frameBorder="0" 
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen
+                  ></iframe>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        {/* Wave SVG Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-auto">
-            <path 
-              fill="#ffffff" 
-              fillOpacity="1" 
-              d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
-            ></path>
-          </svg>
         </div>
       </div>
 
@@ -305,11 +267,9 @@ function LandingPage() {
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-70">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="grayscale hover:grayscale-0 transition-all duration-300">
-                <img 
-                  src={`https://via.placeholder.com/150x60?text=Hospital+${i}`} 
-                  alt="Hospital Partner"
-                  className="h-12 object-contain"
-                />
+                <div className="h-12 w-32 bg-gray-300 rounded flex items-center justify-center text-gray-600 font-semibold text-sm">
+                  Hospital {i}
+                </div>
               </div>
             ))}
           </div>
@@ -532,18 +492,20 @@ function LandingPage() {
             <div className="md:w-1/2">
               <div className="relative">
                 <div className="bg-white p-4 rounded-xl shadow-xl border border-gray-200">
-                  <img 
-                    src="https://via.placeholder.com/600x400?text=AI+Diagnostics+Dashboard" 
-                    alt="AI Diagnostics Dashboard"
-                    className="rounded-lg"
-                  />
+                  <div className="w-full h-64 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <ImagePlus className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+                      <p className="text-blue-700 font-semibold">AI Diagnostics Dashboard</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="absolute -bottom-6 -right-6 bg-white p-2 rounded-lg shadow-lg border border-gray-200 w-32 h-32">
-                  <img 
-                    src="https://via.placeholder.com/200x200?text=ECG+Analysis" 
-                    alt="ECG Analysis"
-                    className="rounded"
-                  />
+                  <div className="w-full h-full bg-gradient-to-br from-green-50 to-emerald-100 rounded flex items-center justify-center">
+                    <div className="text-center">
+                      <LineChart className="h-8 w-8 text-emerald-600 mx-auto mb-1" />
+                      <p className="text-xs text-emerald-700 font-medium">ECG Analysis</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -621,7 +583,7 @@ function LandingPage() {
               Sign Up Now <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
             <Link 
-              to="/login"
+              to="/admin-login"
               className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl hover:bg-white hover:text-emerald-700 transition-all duration-300 font-semibold text-lg"
             >
               Schedule a Demo
@@ -713,7 +675,7 @@ function LandingPage() {
       </footer>
       
       {/* CSS Animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }

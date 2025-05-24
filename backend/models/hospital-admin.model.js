@@ -4,7 +4,9 @@ import mongoose from "mongoose";
 export const HospitalAdmin = User.discriminator(
     "hospital-admin",
     new mongoose.Schema({
-      hospitalName: { type: String },
+      designation: { type: String, default: "Hospital Administrator" },
+      department: { type: String, default: "Administration" },
+      employeeId: { type: String, unique: true, sparse: true }
     })
   );
   

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
+import HospitalLoginPage from "./pages/HospitalLoginPage";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
 import DashboardPage from "./pages/DashboardPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -17,6 +18,7 @@ import PatientHospitalizationsList from "./pages/PatientHospitalizationsList";
 import PatientVisitsList from "./pages/PatientVisitsList";
 import HospitalRegistration from "./pages/HospitalRegistration";
 import HospitalAdminDashboard from "./pages/HospitalAdminDashboard";
+import HospitalPersonnelDashboard from "./components/dashboards/HospitalAdminDashboard";
 
 // EHR related imports
 import EHR from './pages/EHR Pages/EHR';
@@ -55,12 +57,181 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// redirect authenticated users to the dashboard
+// redirect authenticated users to the appropriate dashboard
 const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
   if (isAuthenticated && user.isVerified) {
-    return <Navigate to='/dashboard' replace />;
+    // Redirect based on user role
+    switch (user.role) {
+      case "admin":
+        return <Navigate to='/admin-dashboard' replace />;
+      case "pharmacist":
+        return <Navigate to='/pharmacist-dashboard' replace />;
+      case "hospital-admin":
+        return <Navigate to='/hospital-admin-dashboard' replace />;
+      case "doctor":
+        return <Navigate to='/doctor-dashboard' replace />;
+      case "radiologist":
+        return <Navigate to='/radiologist-dashboard' replace />;
+      case "lab-technologist":
+        return <Navigate to='/lab-dashboard' replace />;
+      case "hospital-front-desk":
+        return <Navigate to='/front-desk-dashboard' replace />;
+      default:
+        return <Navigate to='/dashboard' replace />;
+    }
+  }
+
+  return children;
+};
+
+// Role-specific redirect for System Admin login
+const RedirectAuthenticatedAdmin = ({ children }) => {
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  if (isAuthenticated && user.isVerified) {
+    if (user.role === "admin") {
+      return <Navigate to='/admin-dashboard' replace />;
+    } else {
+      // User is logged in with a different role
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Already Logged In</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                You are currently logged in as <span className="font-semibold">{user.role}</span>. 
+                To access the System Admin portal, you need to logout first.
+              </p>
+              <div className="mt-6 flex space-x-3">
+                <button
+                  onClick={() => logout()}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+                <button
+                  onClick={() => window.history.back()}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  return children;
+};
+
+// Role-specific redirect for Pharmacist login
+const RedirectAuthenticatedPharmacist = ({ children }) => {
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  if (isAuthenticated && user.isVerified) {
+    if (user.role === "pharmacist") {
+      return <Navigate to='/pharmacist-dashboard' replace />;
+    } else {
+      // User is logged in with a different role
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Already Logged In</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                You are currently logged in as <span className="font-semibold">{user.role}</span>. 
+                To access the Pharmacist portal, you need to logout first.
+              </p>
+              <div className="mt-6 flex space-x-3">
+                <button
+                  onClick={() => logout()}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+                <button
+                  onClick={() => window.history.back()}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  return children;
+};
+
+// Role-specific redirect for Hospital login
+const RedirectAuthenticatedHospital = ({ children }) => {
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  if (isAuthenticated && user.isVerified) {
+    const hospitalRoles = ["hospital-admin", "doctor", "radiologist", "lab-technologist", "hospital-front-desk"];
+    
+    if (hospitalRoles.includes(user.role)) {
+      // Redirect to appropriate hospital dashboard
+      switch (user.role) {
+        case "hospital-admin":
+          return <Navigate to='/hospital-admin-dashboard' replace />;
+        case "doctor":
+          return <Navigate to='/doctor-dashboard' replace />;
+        case "radiologist":
+          return <Navigate to='/radiologist-dashboard' replace />;
+        case "lab-technologist":
+          return <Navigate to='/lab-dashboard' replace />;
+        case "hospital-front-desk":
+          return <Navigate to='/front-desk-dashboard' replace />;
+        default:
+          return <Navigate to='/dashboard' replace />;
+      }
+    } else {
+      // User is logged in with a non-hospital role
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Already Logged In</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                You are currently logged in as <span className="font-semibold">{user.role}</span>. 
+                To access the Hospital portal, you need to logout first.
+              </p>
+              <div className="mt-6 flex space-x-3">
+                <button
+                  onClick={() => logout()}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+                <button
+                  onClick={() => window.history.back()}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   return children;
@@ -96,16 +267,54 @@ function App() {
               }
             />
             
+            {/* General login route (defaults to admin) */}
             <Route
               path='/login'
               element={
-                <RedirectAuthenticatedUser>
+                <RedirectAuthenticatedAdmin>
                   <div className="flex items-center justify-center h-screen">
                     <LoginPage />
                   </div>
-                </RedirectAuthenticatedUser>
+                </RedirectAuthenticatedAdmin>
               }
             />
+
+            {/* Admin specific login route */}
+            <Route
+              path='/admin-login'
+              element={
+                <RedirectAuthenticatedAdmin>
+                  <div className="flex items-center justify-center h-screen">
+                    <LoginPage />
+                  </div>
+                </RedirectAuthenticatedAdmin>
+              }
+            />
+
+            {/* Pharmacist specific login route */}
+            <Route
+              path='/pharmacist-login'
+              element={
+                <RedirectAuthenticatedPharmacist>
+                  <div className="flex items-center justify-center h-screen">
+                    <LoginPage />
+                  </div>
+                </RedirectAuthenticatedPharmacist>
+              }
+            />
+
+            {/* Hospital Login Route */}
+            <Route
+              path='/hospital-login'
+              element={
+                <RedirectAuthenticatedHospital>
+                  <HospitalLoginPage />
+                </RedirectAuthenticatedHospital>
+              }
+            />
+
+            {/* Hospital Registration Route */}
+            <Route path='/hospital-registration' element={<HospitalRegistration />} />
 
             {/* Dashboard route */}
             <Route
@@ -115,7 +324,99 @@ function App() {
                   <DashboardPage />
                 </ProtectedRoute>
               }
-            /> 
+            />
+
+            {/* Role-specific Dashboard Routes */}
+            <Route
+              path='/hospital-admin-dashboard'
+              element={
+                <ProtectedRoute>
+                  <HospitalPersonnelDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Hospital Management for Admin */}
+            <Route
+              path='/hospital-admin'
+              element={
+                <ProtectedRoute>
+                  <HospitalAdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/admin-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/pharmacist-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/doctor-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/radiologist-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/lab-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/lab-technologist-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/front-desk-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path='/hospital-front-desk-dashboard'
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Appointment Schedule route */}
             <Route
@@ -336,26 +637,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PatientVisitsList />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Hospital Registration route */}
-            <Route
-              path='/hospital-registration'
-              element={
-                <ProtectedRoute>
-                  <HospitalRegistration />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Hospital Admin Dashboard route */}
-            <Route
-              path='/hospital-admin'
-              element={
-                <ProtectedRoute>
-                  <HospitalAdminDashboard />
                 </ProtectedRoute>
               }
             />

@@ -40,6 +40,46 @@ export const useAuthStore = create((set) => ({
     }
   },
 
+  hospitalAdminLogin: async (email, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.post(`${API_URL}/hospital-admin-login`, { email, password });
+      set({
+        isAuthenticated: true,
+        user: response.data.user,
+        error: null,
+        isLoading: false,
+      });
+    } catch (error) {
+      set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
+      throw error;
+    }
+  },
+
+  addHospitalPersonnel: async (personnelData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.post(`${API_URL}/add-hospital-personnel`, personnelData);
+      set({ isLoading: false });
+      return response.data;
+    } catch (error) {
+      set({ error: error.response?.data?.message || "Error adding personnel", isLoading: false });
+      throw error;
+    }
+  },
+
+  getHospitalPersonnel: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/hospital-personnel`);
+      set({ isLoading: false });
+      return response.data;
+    } catch (error) {
+      set({ error: error.response?.data?.message || "Error fetching personnel", isLoading: false });
+      throw error;
+    }
+  },
+
   logout: async () => {
     set({ isLoading: true, error: null });
     try {

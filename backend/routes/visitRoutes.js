@@ -7,8 +7,12 @@ import {
   deleteVisit,
   uploadFiles
 } from '../controllers/visitController.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
+
+// Apply verifyToken middleware to all routes
+router.use(verifyToken);
 
 // Create a new visit - apply the upload middleware first
 router.post('/', uploadFiles, createVisit);

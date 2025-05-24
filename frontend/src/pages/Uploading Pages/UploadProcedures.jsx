@@ -99,7 +99,8 @@ const UploadProcedures = () => {
 
       const response = await axios.post('http://localhost:5000/api/procedures', formDataToSend, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 

@@ -589,6 +589,86 @@ function HospitalizationDetails({ hospitalization, onClose }) {
                           <p className="text-sm text-slate-600">{procedure.notes}</p>
                         </div>
                       )}
+
+                      {/* Procedure Documents */}
+                      {procedure.documents && procedure.documents.length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Documents</h4>
+                          <div className="space-y-3">
+                            {procedure.documents.map((doc, docIndex) => (
+                              <div key={docIndex} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <div className="flex items-center">
+                                  <FaRegFilePdf className="h-5 w-5 text-red-500 mr-3" />
+                                  <span className="text-sm text-slate-700">Document {docIndex + 1}</span>
+                                </div>
+                                <div className="flex space-x-2">
+                                  <a 
+                                    href={getFileUrl(doc)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sky-600 hover:text-sky-800 px-2 py-1 rounded hover:bg-sky-50 transition-colors"
+                                    title="View document"
+                                  >
+                                    <FaRegFilePdf />
+                                  </a>
+                                  <a 
+                                    href={getFileUrl(doc)}
+                                    download
+                                    className="text-sky-600 hover:text-sky-800 px-2 py-1 rounded hover:bg-sky-50 transition-colors"
+                                    title="Download document"
+                                  >
+                                    <FaDownload />
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Procedure Images */}
+                      {procedure.images && procedure.images.length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Images</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {procedure.images.map((image, imgIndex) => (
+                              <div key={imgIndex} className="space-y-3">
+                                <div className="relative group cursor-pointer" onClick={() => setSelectedImage(getFileUrl(image))}>
+                                  <img 
+                                    src={getFileUrl(image)}
+                                    alt={`${procedure.procedureName} image ${imgIndex + 1}`}
+                                    className="w-full h-48 object-contain rounded-lg bg-slate-100 border border-slate-200"
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">
+                                    <button 
+                                      className="opacity-0 group-hover:opacity-100 text-white bg-sky-600 px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors"
+                                    >
+                                      View Full Image
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="flex justify-center space-x-3">
+                                  <a 
+                                    href={getFileUrl(image)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-3 py-2 bg-sky-50 border border-sky-200 rounded-lg text-sm font-medium text-sky-700 hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors shadow-sm"
+                                  >
+                                    <FaRegImage className="mr-2" /> View
+                                  </a>
+                                  <a 
+                                    href={getFileUrl(image)}
+                                    download
+                                    className="inline-flex items-center px-3 py-2 bg-sky-50 border border-sky-200 rounded-lg text-sm font-medium text-sky-700 hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors shadow-sm"
+                                  >
+                                    <FaDownload className="mr-2" /> Download
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

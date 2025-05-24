@@ -9,10 +9,11 @@ import {
   deleteImaging,
   searchImaging
 } from '../controllers/imagingController.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
-// Dedicated route for serving imaging files
+// Dedicated route for serving imaging files (public access for file serving)
 router.get('/file/:filename', (req, res) => {
   try {
     const filename = decodeURIComponent(req.params.filename);
@@ -57,6 +58,9 @@ router.get('/file/:filename', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Apply verifyToken middleware to all data access routes
+router.use(verifyToken);
 
 // Imaging routes
 router.post('/', createImaging);

@@ -1,5 +1,6 @@
 import Hospitalization from '../models/Hospitalization.js';
 import Patient from '../models/User.js';
+import { User } from '../models/user.model.js';
 import multer from 'multer';
 import path from 'path';
 
@@ -41,6 +42,31 @@ export const createHospitalization = async (req, res) => {
     }
 
     try {
+      // Get the authenticated user information
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Verify user has a hospital ID and appropriate role
+      if (!user.hospitalId) {
+        return res.status(403).json({
+          success: false,
+          error: 'User must be associated with a hospital to upload hospitalization records'
+        });
+      }
+
+      // Verify user role (doctors, hospital admins, or front desk can upload hospitalizations)
+      if (!['doctor', 'hospital-admin', 'hospital-front-desk'].includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only doctors, hospital admins, or front desk staff can upload hospitalization records'
+        });
+      }
+
       // Check if patient exists
       const patient = await Patient.findById(req.body.patientId);
       if (!patient) {
@@ -53,6 +79,8 @@ export const createHospitalization = async (req, res) => {
       // Parse arrays from request body
       const hospitalizationData = {
         ...req.body,
+        uploadedBy: user._id,        // Auto-populate from authenticated user
+        hospitalId: user.hospitalId, // Auto-populate from authenticated user
         proceduresDone: JSON.parse(req.body.proceduresDone),
         associatedLabResults: req.body.associatedLabResults ? JSON.parse(req.body.associatedLabResults) : [],
         associatedImaging: req.body.associatedImaging ? JSON.parse(req.body.associatedImaging) : [],
@@ -66,6 +94,14 @@ export const createHospitalization = async (req, res) => {
         })) || []
       };
 
+      console.log('Creating hospitalization record with data:', {
+        patientId: hospitalizationData.patientId,
+        uploadedBy: hospitalizationData.uploadedBy,
+        hospitalId: hospitalizationData.hospitalId,
+        hospital: hospitalizationData.hospital,
+        userRole: user.role
+      });
+
       const hospitalization = await Hospitalization.create(hospitalizationData);
       
       res.status(201).json({
@@ -73,6 +109,7 @@ export const createHospitalization = async (req, res) => {
         data: hospitalization
       });
     } catch (error) {
+      console.error('Error creating hospitalization record:', error);
       res.status(400).json({
         success: false,
         error: error.message

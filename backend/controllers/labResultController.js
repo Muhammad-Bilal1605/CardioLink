@@ -1,5 +1,6 @@
 import LabResult from '../models/LabResult.js';
 import Patient from '../models/User.js';
+import { User } from '../models/user.model.js';
 import multer from 'multer';
 import path from 'path';
 
@@ -80,6 +81,31 @@ export const createLabResult = async (req, res) => {
     }
 
     try {
+      // Get the authenticated user information
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Verify user has a hospital ID and appropriate role
+      if (!user.hospitalId) {
+        return res.status(403).json({
+          success: false,
+          error: 'User must be associated with a hospital to upload lab results'
+        });
+      }
+
+      // Verify user role (typically lab technologists should upload lab results)
+      if (!['lab-technologist', 'doctor', 'hospital-admin'].includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only lab technologists, doctors, or hospital admins can upload lab results'
+        });
+      }
+
       // Check if patient exists
       const patient = await Patient.findById(req.body.patientId);
       if (!patient) {
@@ -92,9 +118,19 @@ export const createLabResult = async (req, res) => {
       // Parse the results array from the request body
       const labResultData = {
         ...req.body,
+        uploadedBy: user._id,        // Auto-populate from authenticated user
+        hospitalId: user.hospitalId, // Auto-populate from authenticated user
         results: JSON.parse(req.body.results),
         reportUrl: req.file ? `/uploads/${req.file.filename}` : undefined
       };
+
+      console.log('Creating lab result with data:', {
+        patientId: labResultData.patientId,
+        uploadedBy: labResultData.uploadedBy,
+        hospitalId: labResultData.hospitalId,
+        testName: labResultData.testName,
+        userRole: user.role
+      });
 
       const labResult = await LabResult.create(labResultData);
       
@@ -103,6 +139,7 @@ export const createLabResult = async (req, res) => {
         data: labResult
       });
     } catch (error) {
+      console.error('Error creating lab result:', error);
       res.status(400).json({
         success: false,
         error: error.message

@@ -9,8 +9,12 @@ import {
   deleteLabResult,
   searchLabResults
 } from '../controllers/labResultController.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
+
+// Apply verifyToken middleware to all routes
+router.use(verifyToken);
 
 // Dedicated route for serving lab result files (PDFs, documents)
 router.get('/file/:filename', (req, res) => {

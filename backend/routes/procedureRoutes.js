@@ -4,12 +4,18 @@ import fs from 'fs';
 import {
   createProcedure,
   getPatientProcedures,
-  getProcedure,
+  getProcedureById,
   updateProcedure,
-  deleteProcedure
+  deleteProcedure,
+  searchProcedures,
+  uploadFiles
 } from '../controllers/procedureController.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
+
+// Apply verifyToken middleware to all routes
+router.use(verifyToken);
 
 // Dedicated route for serving procedure files (documents, images)
 router.get('/file/:filename', (req, res) => {
@@ -77,10 +83,11 @@ router.get('/file/:filename', (req, res) => {
 });
 
 // Procedure routes
-router.post('/', createProcedure);
+router.post('/', uploadFiles, createProcedure);
 router.get('/patient/:patientId', getPatientProcedures);
-router.get('/:id', getProcedure);
-router.put('/:id', updateProcedure);
+router.get('/search', searchProcedures);
+router.get('/:id', getProcedureById);
+router.put('/:id', uploadFiles, updateProcedure);
 router.delete('/:id', deleteProcedure);
 
 export default router; 

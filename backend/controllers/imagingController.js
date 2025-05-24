@@ -1,5 +1,6 @@
 import Imaging from '../models/Imaging.js';
 import Patient from '../models/User.js';
+import { User } from '../models/user.model.js';
 import multer from 'multer';
 import path from 'path';
 
@@ -77,6 +78,31 @@ export const createImaging = async (req, res) => {
     }
 
     try {
+      // Get the authenticated user information
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Verify user has a hospital ID and appropriate role
+      if (!user.hospitalId) {
+        return res.status(403).json({
+          success: false,
+          error: 'User must be associated with a hospital to upload imaging records'
+        });
+      }
+
+      // Verify user role (typically radiologists should upload imaging)
+      if (!['radiologist', 'doctor', 'hospital-admin'].includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only radiologists, doctors, or hospital admins can upload imaging records'
+        });
+      }
+
       // Check if patient exists
       const patient = await Patient.findById(req.body.patientId);
       if (!patient) {
@@ -86,11 +112,21 @@ export const createImaging = async (req, res) => {
         });
       }
 
-      // Create imaging record with file path
+      // Create imaging record with file path and auto-populated fields
       const imagingData = {
         ...req.body,
+        uploadedBy: user._id,        // Auto-populate from authenticated user
+        hospitalId: user.hospitalId, // Auto-populate from authenticated user
         imageUrl: req.file ? `/uploads/${req.file.filename}` : req.body.imageUrl
       };
+
+      console.log('Creating imaging record with data:', {
+        patientId: imagingData.patientId,
+        uploadedBy: imagingData.uploadedBy,
+        hospitalId: imagingData.hospitalId,
+        type: imagingData.type,
+        userRole: user.role
+      });
 
       const imaging = await Imaging.create(imagingData);
       
@@ -99,6 +135,7 @@ export const createImaging = async (req, res) => {
         data: imaging
       });
     } catch (error) {
+      console.error('Error creating imaging record:', error);
       res.status(400).json({
         success: false,
         error: error.message

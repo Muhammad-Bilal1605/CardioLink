@@ -6,6 +6,16 @@ const labResultSchema = new mongoose.Schema({
     ref: 'Patient',
     required: true
   },
+  hospitalId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+    required: true
+  },
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   testName: {
     type: String,
     required: true

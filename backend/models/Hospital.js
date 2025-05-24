@@ -145,6 +145,11 @@ const hospitalSchema = new mongoose.Schema({
       lowercase: true,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email address']
     },
+    password: {
+      type: String,
+      required: [true, 'Administrative contact password is required'],
+      minlength: [6, 'Password must be at least 6 characters long']
+    },
     idProof: {
       documentType: {
         type: String,

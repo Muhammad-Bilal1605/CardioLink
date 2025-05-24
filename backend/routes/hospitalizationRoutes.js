@@ -6,8 +6,12 @@ import {
   updateHospitalization,
   deleteHospitalization
 } from '../controllers/hospitalizationController.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
+
+// Apply verifyToken middleware to all routes
+router.use(verifyToken);
 
 // Hospitalization routes
 router.post('/', createHospitalization);
