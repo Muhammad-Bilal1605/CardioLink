@@ -40,20 +40,20 @@ const HospitalLoginPage = () => {
 				
 				// Navigate based on user role
 				switch (role) {
-					case "doctor":
-						navigate("/doctor-dashboard");
-						break;
-					case "radiologist":
-						navigate("/radiologist-dashboard");
-						break;
-					case "lab-technologist":
+							case "doctor":
+								navigate("/doctor-dashboard");
+								break;
+							case "radiologist":
+								navigate("/radiologist-dashboard");
+								break;
+							case "lab-technologist":
 						navigate("/lab-technologist-dashboard");
-						break;
-					case "hospital-front-desk":
+								break;
+							case "hospital-front-desk":
 						navigate("/hospital-front-desk-dashboard");
-						break;
-					default:
-						navigate("/dashboard");
+								break;
+							default:
+								navigate("/dashboard");
 				}
 			}
 		} catch (error) {

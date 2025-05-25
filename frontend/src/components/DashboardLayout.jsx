@@ -13,7 +13,10 @@ import {
   User, 
   Bell,
   Calendar,FileText,
-  ClipboardList
+  ClipboardList,
+  Activity,
+  Video,
+  AudioWaveform
 } from "lucide-react";
 
 const DashboardLayout = ({ children, title, role }) => {
@@ -72,7 +75,9 @@ const DashboardLayout = ({ children, title, role }) => {
         return [
           ...baseItems,
           { name: "Upload Imaging", href: "/patient-imaging", icon: <PieChart className="w-5 h-5" /> },
-          { name: "Reports", href: "/reports", icon: <Users className="w-5 h-5" /> },
+          { name: "ECG Analysis", href: "/ecg-analysis", icon: <Activity className="w-5 h-5" /> },
+          { name: "ECHO Analysis", href: "/echo-analysis", icon: <Video className="w-5 h-5" /> },
+          { name: "Heartbeat Analysis", href: "/heartbeat-analysis", icon: <AudioWaveform className="w-5 h-5" /> },
         ];
       case "lab-technologist":
         return [

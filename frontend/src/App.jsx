@@ -1,5 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import ECGAnalyzer from "./pages/AI DIagnosis/ECGAnalyzer";
+import EchoAnalyzer from "./pages/AI DIagnosis/EchoAnalyzer";
+import HeartbeatAnalyzer from "./pages/AI DIagnosis/HeartbeatAnalyzer";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import HospitalLoginPage from "./pages/HospitalLoginPage";
@@ -255,14 +258,42 @@ function App() {
             {/* Landing Page is now the default route */}
             <Route path='/' element={<LandingPage />} />
             
+            {/* FOr ECG analysis */}
+            <Route
+              path='/ecg-analysis'
+              element={
+                <ProtectedRoute>
+                  <ECGAnalyzer />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* FOr ECHO analysis */}
+            <Route
+              path='/echo-analysis'
+              element={
+                <ProtectedRoute>
+                  <EchoAnalyzer />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* FOr heartbeat analysis */}
+            <Route
+              path='/heartbeat-analysis'
+              element={
+                <ProtectedRoute>
+                  <HeartbeatAnalyzer />
+                </ProtectedRoute>
+              }
+            />
+            
             {/* Auth Routes with Redirection */}
             <Route
               path='/signup'
               element={
                 <RedirectAuthenticatedUser>
-                  <div className="flex items-center justify-center h-screen">
-                    <SignUpPage />
-                  </div>
+                  <SignUpPage />
                 </RedirectAuthenticatedUser>
               }
             />
@@ -272,9 +303,7 @@ function App() {
               path='/login'
               element={
                 <RedirectAuthenticatedAdmin>
-                  <div className="flex items-center justify-center h-screen">
-                    <LoginPage />
-                  </div>
+                  <LoginPage />
                 </RedirectAuthenticatedAdmin>
               }
             />
@@ -284,9 +313,7 @@ function App() {
               path='/admin-login'
               element={
                 <RedirectAuthenticatedAdmin>
-                  <div className="flex items-center justify-center h-screen">
-                    <LoginPage />
-                  </div>
+                  <LoginPage />
                 </RedirectAuthenticatedAdmin>
               }
             />
@@ -296,9 +323,7 @@ function App() {
               path='/pharmacist-login'
               element={
                 <RedirectAuthenticatedPharmacist>
-                  <div className="flex items-center justify-center h-screen">
-                    <LoginPage />
-                  </div>
+                  <LoginPage />
                 </RedirectAuthenticatedPharmacist>
               }
             />
@@ -561,11 +586,7 @@ function App() {
             {/* Email Verification (public) */}
             <Route 
               path='/verify-email' 
-              element={
-                <div className="flex items-center justify-center h-screen">
-                  <EmailVerificationPage />
-                </div>
-              } 
+              element={<EmailVerificationPage />} 
             />
 
             {/* Password Recovery */}
@@ -573,9 +594,7 @@ function App() {
               path='/forgot-password'
               element={
                 <RedirectAuthenticatedUser>
-                  <div className="flex items-center justify-center h-screen">
-                    <ForgotPasswordPage />
-                  </div>
+                  <ForgotPasswordPage />
                 </RedirectAuthenticatedUser>
               }
             />
@@ -584,9 +603,7 @@ function App() {
               path='/reset-password/:token'
               element={
                 <RedirectAuthenticatedUser>
-                  <div className="flex items-center justify-center h-screen">
-                    <ResetPasswordPage />
-                  </div>
+                  <ResetPasswordPage />
                 </RedirectAuthenticatedUser>
               }
             />

@@ -45,7 +45,7 @@ export const createProcedure = async (req, res) => {
     // Verify user has a hospital ID and appropriate role
     if (!user.hospitalId) {
       return res.status(403).json({
-        success: false,
+        success: false, 
         error: 'User must be associated with a hospital to upload procedure records'
       });
     }
@@ -57,69 +57,69 @@ export const createProcedure = async (req, res) => {
         error: 'Only doctors, hospital admins, or front desk staff can upload procedure records'
       });
     }
-    
-    const {
-      patientId,
-      procedureName,
-      date,
-      hospital,
-      physician,
-      indication,
-      findings,
-      complications,
-      followUpPlan,
-      status
-    } = req.body;
+      
+      const {
+        patientId,
+        procedureName,
+        date,
+        hospital,
+        physician,
+        indication,
+        findings,
+        complications,
+        followUpPlan,
+        status
+      } = req.body;
 
-    if (!patientId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Patient ID is required'
-      });
-    }
+      if (!patientId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Patient ID is required'
+        });
+      }
 
-    // Create arrays for documents and images paths
-    let documents = [];
-    let images = [];
+      // Create arrays for documents and images paths
+      let documents = [];
+      let images = [];
 
-    // Process document files if any
-    if (req.files && req.files.documents) {
-      documents = req.files.documents.map(file => 
-        `/uploads/${file.filename}`
-      );
-    }
-    
-    // Process image files if any
-    if (req.files && req.files.images) {
-      images = req.files.images.map(file => 
-        `/uploads/${file.filename}`
-      );
-    }
+      // Process document files if any
+      if (req.files && req.files.documents) {
+        documents = req.files.documents.map(file => 
+          `/uploads/${file.filename}`
+        );
+      }
+      
+      // Process image files if any
+      if (req.files && req.files.images) {
+        images = req.files.images.map(file => 
+          `/uploads/${file.filename}`
+        );
+      }
 
     // Create procedure object with auto-populated fields
-    const procedureData = {
-      patientId,
+      const procedureData = {
+        patientId,
       hospitalId: user.hospitalId,  // Auto-populate from authenticated user
       uploadedBy: user._id,         // Auto-populate from authenticated user
-      procedureName: procedureName || 'Untitled Procedure',
-      date: date || new Date(),
-      hospital: hospital || 'Unknown',
-      physician: physician || 'Unknown',
-      indication: indication || 'Not specified',
-      findings: findings || 'Not specified',
-      complications: complications || '',
-      followUpPlan: followUpPlan || 'None',
-      status: status || 'Scheduled'
-    };
+        procedureName: procedureName || 'Untitled Procedure',
+        date: date || new Date(),
+        hospital: hospital || 'Unknown',
+        physician: physician || 'Unknown',
+        indication: indication || 'Not specified',
+        findings: findings || 'Not specified',
+        complications: complications || '',
+        followUpPlan: followUpPlan || 'None',
+        status: status || 'Scheduled'
+      };
 
-    // Only add documents and images if there are any
-    if (documents.length > 0) {
-      procedureData.documents = documents;
-    }
-    
-    if (images.length > 0) {
-      procedureData.images = images;
-    }
+      // Only add documents and images if there are any
+      if (documents.length > 0) {
+        procedureData.documents = documents;
+      }
+      
+      if (images.length > 0) {
+        procedureData.images = images;
+      }
 
     console.log("Creating procedure with data:", {
       patientId: procedureData.patientId,
@@ -129,22 +129,22 @@ export const createProcedure = async (req, res) => {
       userRole: user.role
     });
 
-    // Save the procedure
-    const procedure = new Procedure(procedureData);
-    await procedure.save();
-    
-    return res.status(201).json({ 
-      success: true, 
-      message: 'Procedure created successfully',
+      // Save the procedure
+      const procedure = new Procedure(procedureData);
+      await procedure.save();
+      
+      return res.status(201).json({ 
+        success: true, 
+        message: 'Procedure created successfully',
       data: procedure 
-    });
-  } catch (error) {
-    console.error('Procedure creation error:', error);
-    return res.status(400).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
+      });
+    } catch (error) {
+      console.error('Procedure creation error:', error);
+      return res.status(400).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
 };
 
 // Get all procedures for a patient
@@ -202,67 +202,67 @@ export const searchProcedures = async (req, res) => {
 
 // Update a procedure
 export const updateProcedure = async (req, res) => {
-  try {
-    // Check if procedure exists first
-    const existingProcedure = await Procedure.findById(req.params.id);
-    if (!existingProcedure) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Procedure not found' 
-      });
-    }
-    
-    // Build update data from text fields
-    const updateData = { ...req.body };
-    
-    // Process new files if any
-    if (req.files) {
-      // For documents
-      if (req.files.documents && req.files.documents.length > 0) {
-        const newDocuments = req.files.documents.map(file => 
-          `/uploads/${file.filename}`
-        );
-        
-        // Get existing documents array or empty array
-        const existingDocs = existingProcedure.documents || [];
-        // Create a new array with both existing and new documents
-        updateData.documents = [...existingDocs, ...newDocuments];
+    try {
+      // Check if procedure exists first
+      const existingProcedure = await Procedure.findById(req.params.id);
+      if (!existingProcedure) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Procedure not found' 
+        });
       }
       
-      // For images
-      if (req.files.images && req.files.images.length > 0) {
-        const newImages = req.files.images.map(file => 
-          `/uploads/${file.filename}`
-        );
+      // Build update data from text fields
+      const updateData = { ...req.body };
+      
+      // Process new files if any
+      if (req.files) {
+        // For documents
+        if (req.files.documents && req.files.documents.length > 0) {
+          const newDocuments = req.files.documents.map(file => 
+            `/uploads/${file.filename}`
+          );
+          
+          // Get existing documents array or empty array
+          const existingDocs = existingProcedure.documents || [];
+          // Create a new array with both existing and new documents
+          updateData.documents = [...existingDocs, ...newDocuments];
+        }
         
-        // Get existing images array or empty array
-        const existingImages = existingProcedure.images || [];
-        // Create a new array with both existing and new images
-        updateData.images = [...existingImages, ...newImages];
+        // For images
+        if (req.files.images && req.files.images.length > 0) {
+          const newImages = req.files.images.map(file => 
+            `/uploads/${file.filename}`
+          );
+          
+          // Get existing images array or empty array
+          const existingImages = existingProcedure.images || [];
+          // Create a new array with both existing and new images
+          updateData.images = [...existingImages, ...newImages];
+        }
       }
+
+      console.log("Updating procedure with data:", JSON.stringify(updateData, null, 2));
+
+      // Update the procedure
+      const procedure = await Procedure.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      res.status(200).json({ 
+        success: true, 
+        message: 'Procedure updated successfully',
+        data: procedure 
+      });
+    } catch (error) {
+      console.error('Error updating procedure:', error);
+      res.status(400).json({ 
+        success: false, 
+        message: error.message 
+      });
     }
-
-    console.log("Updating procedure with data:", JSON.stringify(updateData, null, 2));
-
-    // Update the procedure
-    const procedure = await Procedure.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
-    res.status(200).json({ 
-      success: true, 
-      message: 'Procedure updated successfully',
-      data: procedure 
-    });
-  } catch (error) {
-    console.error('Error updating procedure:', error);
-    res.status(400).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
 };
 
 // Delete a procedure
