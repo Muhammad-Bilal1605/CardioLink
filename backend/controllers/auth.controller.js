@@ -458,3 +458,32 @@ export const getHospitalPersonnel = async (req, res) => {
 		res.status(500).json({ success: false, message: "Server error" });
 	}
 };
+
+// Check if email already exists
+export const checkEmailExists = async (req, res) => {
+	try {
+		const { email } = req.body;
+		
+		if (!email) {
+			return res.status(400).json({ 
+				success: false, 
+				message: "Email is required" 
+			});
+		}
+
+		// Check if email exists in User collection
+		const existingUser = await User.findOne({ email: email.toLowerCase() });
+		
+		res.status(200).json({
+			success: true,
+			exists: !!existingUser,
+			message: existingUser ? "Email already exists" : "Email is available"
+		});
+	} catch (error) {
+		console.error("Error in checkEmailExists:", error);
+		res.status(500).json({ 
+			success: false, 
+			message: "Error checking email availability" 
+		});
+	}
+};

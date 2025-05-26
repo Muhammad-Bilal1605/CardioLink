@@ -24,10 +24,27 @@ const SignUpPage = () => {
     }
   }, [searchParams]);
 
+  // Function to calculate password strength (same as PasswordStrengthMeter)
+  const getPasswordStrength = (pass) => {
+    let strength = 0;
+    if (pass.length >= 6) strength++;
+    if (pass.match(/[a-z]/) && pass.match(/[A-Z]/)) strength++;
+    if (pass.match(/\d/)) strength++;
+    if (pass.match(/[^a-zA-Z\d]/)) strength++;
+    return strength;
+  };
+
   const handleSignUp = async (e) => {
     e.preventDefault();
 
     if (!role) {
+      return;
+    }
+
+    // Check password strength - must be strong (strength = 4)
+    const passwordStrength = getPasswordStrength(password);
+    if (passwordStrength < 4) {
+      // You can also show an error message here if needed
       return;
     }
 
@@ -184,12 +201,26 @@ const SignUpPage = () => {
               </div>
             )}
 
+            {/* Password strength requirement message */}
+            {password && getPasswordStrength(password) < 4 && (
+              <div className="p-3 mb-4 text-sm text-amber-700 bg-amber-100 rounded-lg border border-amber-200" role="alert">
+                <div className="flex items-center">
+                  <Lock className="w-4 h-4 mr-2" />
+                  Password must be strong to continue. Please meet all criteria above.
+                </div>
+              </div>
+            )}
+
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg shadow transition duration-200 flex items-center justify-center mt-6"
+              whileHover={{ scale: getPasswordStrength(password) >= 4 && !isLoading && role ? 1.02 : 1 }}
+              whileTap={{ scale: getPasswordStrength(password) >= 4 && !isLoading && role ? 0.98 : 1 }}
+              className={`w-full py-3 px-4 font-medium rounded-lg shadow transition duration-200 flex items-center justify-center mt-6 ${
+                isLoading || !role || getPasswordStrength(password) < 4
+                  ? "bg-gray-400 cursor-not-allowed text-gray-600"
+                  : "bg-red-500 hover:bg-red-600 text-white"
+              }`}
               type="submit"
-              disabled={isLoading || !role}
+              disabled={isLoading || !role || getPasswordStrength(password) < 4}
             >
               {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : "Create Account"}
             </motion.button>

@@ -117,6 +117,17 @@ export const createHospital = async (req, res) => {
     // Parse dot notation from FormData into nested objects
     const hospitalData = parseDotNotation(req.body);
     
+    // Check if administrative contact email already exists in the User collection
+    if (hospitalData.administrativeContact && hospitalData.administrativeContact.emailAddress) {
+      const existingUser = await User.findOne({ email: hospitalData.administrativeContact.emailAddress });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this administrative contact email already exists. Please use a different email address.'
+        });
+      }
+    }
+    
     // Hash the administrative contact password if provided
     if (hospitalData.administrativeContact && hospitalData.administrativeContact.password) {
       console.log('Hashing administrative contact password...');

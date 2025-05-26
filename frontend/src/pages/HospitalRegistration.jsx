@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -22,6 +22,8 @@ const HospitalRegistration = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState('');
+  const [emailCheckLoading, setEmailCheckLoading] = useState(false);
+  const [emailCheckTimeout, setEmailCheckTimeout] = useState(null);
 
   const [formData, setFormData] = useState({
     // Basic Information
@@ -31,7 +33,7 @@ const HospitalRegistration = () => {
     yearEstablished: '',
     numberOfBeds: '',
     specialtiesOffered: [],
-    ownershipType: 'Private',
+    ownershipType: 'Proprietorship',
     
     // Address Information
     address: {
@@ -110,6 +112,15 @@ const HospitalRegistration = () => {
   const ownershipDocTypes = ['Ownership Deed', 'Lease Agreement', 'Rental Agreement', 'Other'];
   const accreditationTypes = ['ISO', 'NABH', 'JCIA', 'Other'];
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (emailCheckTimeout) {
+        clearTimeout(emailCheckTimeout);
+      }
+    };
+  }, [emailCheckTimeout]);
+
   const steps = [
     { number: 1, title: 'Basic Information', icon: Building2 },
     { number: 2, title: 'Contact & Location', icon: MapPin },
@@ -168,6 +179,53 @@ const HospitalRegistration = () => {
     }));
   };
 
+  // Function to check if email already exists (debounced)
+  const checkEmailExists = (email) => {
+    if (!email || !email.includes('@')) {
+      // Clear any existing email error if email is empty or invalid
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors['administrativeContact.emailAddress'];
+        return newErrors;
+      });
+      return;
+    }
+    
+    // Clear existing timeout
+    if (emailCheckTimeout) {
+      clearTimeout(emailCheckTimeout);
+    }
+    
+    setEmailCheckLoading(true);
+    
+    // Set a new timeout for 1 second delay
+    const timeout = setTimeout(async () => {
+      try {
+        const response = await axios.post('http://localhost:5000/api/auth/check-email', { email });
+        
+        if (response.data.exists) {
+          setErrors(prev => ({
+            ...prev,
+            'administrativeContact.emailAddress': 'An account with this email already exists. Please use a different email address.'
+          }));
+        } else {
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors['administrativeContact.emailAddress'];
+            return newErrors;
+          });
+        }
+      } catch (error) {
+        console.error('Error checking email:', error);
+        // Don't show error for email check failure, just continue
+      } finally {
+        setEmailCheckLoading(false);
+      }
+    }, 1000);
+    
+    setEmailCheckTimeout(timeout);
+  };
+
   const handleFileChange = (fieldName, file) => {
     if (fieldName === 'accreditationCertificates') {
       setFiles(prev => ({
@@ -222,7 +280,11 @@ const HospitalRegistration = () => {
         if (!formData.administrativeContact.fullName) newErrors['administrativeContact.fullName'] = 'Admin name is required';
         if (!formData.administrativeContact.designation) newErrors['administrativeContact.designation'] = 'Designation is required';
         if (!formData.administrativeContact.phoneNumber) newErrors['administrativeContact.phoneNumber'] = 'Admin phone is required';
-        if (!formData.administrativeContact.emailAddress) newErrors['administrativeContact.emailAddress'] = 'Admin email is required';
+        if (!formData.administrativeContact.emailAddress) {
+          newErrors['administrativeContact.emailAddress'] = 'Admin email is required';
+        } else if (errors['administrativeContact.emailAddress']) {
+          newErrors['administrativeContact.emailAddress'] = errors['administrativeContact.emailAddress'];
+        }
         if (!formData.administrativeContact.password) {
           newErrors['administrativeContact.password'] = 'Password is required';
         } else if (formData.administrativeContact.password.length < 6) {
@@ -717,16 +779,26 @@ const HospitalRegistration = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email Address *
           </label>
-          <input
-            type="email"
-            name="administrativeContact.emailAddress"
-            value={formData.administrativeContact.emailAddress}
-            onChange={handleInputChange}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors['administrativeContact.emailAddress'] ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="Enter email address"
-          />
+          <div className="relative">
+            <input
+              type="email"
+              name="administrativeContact.emailAddress"
+              value={formData.administrativeContact.emailAddress}
+              onChange={(e) => {
+                handleInputChange(e);
+                checkEmailExists(e.target.value);
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors['administrativeContact.emailAddress'] ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter email address"
+            />
+            {emailCheckLoading && (
+              <div className="absolute right-3 top-3">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+              </div>
+            )}
+          </div>
           {errors['administrativeContact.emailAddress'] && <p className="text-red-500 text-sm mt-1">{errors['administrativeContact.emailAddress']}</p>}
         </div>
 

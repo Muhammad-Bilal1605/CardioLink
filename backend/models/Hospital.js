@@ -47,7 +47,7 @@ const hospitalSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Ownership type is required'],
     enum: ['Proprietorship', 'Partnership', 'Corporation', 'Non-Profit', 'Government', 'Trust', 'Other'],
-    default: 'Private'
+    default: 'Proprietorship'
   },
 
   // Contact & Location Information

@@ -10,6 +10,7 @@ import {
 	hospitalAdminLogin,
 	addHospitalPersonnel,
 	getHospitalPersonnel,
+	checkEmailExists,
 } from "../controllers/auth.controller.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 
@@ -24,6 +25,7 @@ router.post("/logout", logout);
 router.post("/hospital-admin-login", hospitalAdminLogin);
 router.post("/add-hospital-personnel", verifyToken, addHospitalPersonnel);
 router.get("/hospital-personnel", verifyToken, getHospitalPersonnel);
+router.post("/check-email", checkEmailExists);
 
 router.post("/verify-email", verifyEmail);
 router.post("/forgot-password", forgotPassword);
