@@ -211,3 +211,86 @@ export const getPatientRecords = async (req, res) => {
     });
   }
 }; 
+
+// Get all patients with pagination and filtering
+export const getAllPatients = async (req, res) => {
+  try {
+    console.log('Fetching all patients...');
+    
+    // Get pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get filter parameters
+    const { search, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    
+    // Build query
+    const query = { isActive: { $ne: false } };
+    
+    // Add search filter if provided
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Add status filter if provided
+    if (status) {
+      query.status = status;
+    }
+
+    // Get sort order
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    // Execute queries in parallel
+    const [patients, total] = await Promise.all([
+      Patient.find(query)
+        .select('-__v -password')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Patient.countDocuments(query)
+    ]);
+
+    // Calculate pagination metadata
+    const pages = Math.ceil(total / limit);
+    const hasNext = page < pages;
+    const hasPrev = page > 1;
+
+    // Format response
+    const response = {
+      success: true,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+        hasNext,
+        hasPrev
+      },
+      data: patients
+    };
+
+    console.log(`Successfully fetched ${patients.length} of ${total} patients`);
+    return res.status(200).json(response);
+    
+  } catch (error) {
+    console.error('Error in getAllPatients:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+      timestamp: new Date().toISOString()
+    });
+    
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch patients',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
