@@ -1,640 +1,1466 @@
-import { useState, useEffect, useRef } from 'react';
-import { useAuthStore } from "../../store/authStore";
-import { Phone, Video, Mic, Send, MoreVertical, Search, X, PauseCircle, ChevronLeft } from 'lucide-react';
-import io from 'socket.io-client';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Phone, Video, Mic, Send, MoreVertical, Search, PauseCircle, Check, AlertCircle, Wifi, WifiOff, PhoneOff, VideoOff, Volume2, MicOff } from 'lucide-react';
+import { io } from 'socket.io-client';
 
-// Initialize socket connection
-const socket = io('http://localhost:5173'); // Replace with your actual server URL
+const DOCTOR_PROFILE = {
+  id: 'doctor_001',
+  name: "Dr. Sarah Williams",
+  email: "dr.williams@medconnect.com",
+  specialization: "General Medicine",
+  avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
+};
+
+// ICE servers configuration for WebRTC
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+};
 
 const DoctorChats = () => {
-  const { auth } = useAuthStore();
+  const [socket, setSocket] = useState(null);
   const [currentChat, setCurrentChat] = useState(null);
+  const [currentRoom, setCurrentRoom] = useState(null);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState({});
   const [isRecording, setIsRecording] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [onlinePatients, setOnlinePatients] = useState(new Set());
+  const [connectionError, setConnectionError] = useState(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [patients, setPatients] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+
+  // WebRTC Call States
+  const [isInCall, setIsInCall] = useState(false);
+  const [callType, setCallType] = useState(null); // 'audio' or 'video'
+  const [isCallIncoming, setIsCallIncoming] = useState(false);
+  const [incomingCallData, setIncomingCallData] = useState(null);
+  const [callStatus, setCallStatus] = useState('idle'); // 'idle', 'calling', 'ringing', 'connected', 'ended'
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [callStartTime, setCallStartTime] = useState(null);
+  const [callDuration, setCallDuration] = useState(0);
+
+  // Refs
   const chatContainerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const navigate = useNavigate();
+  const typingTimeoutRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const socketRef = useRef(null);
+  
+  // WebRTC Refs
+  const peerConnectionRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const callDurationIntervalRef = useRef(null);
 
-  // Doctor profile - using an actual image URL
-  const doctorProfile = {
-    avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
-    name: auth?.user?.name || "Sarah Williams",
-    email: auth?.user?.email || "dr.williams@medconnect.com",
-    specialization: auth?.user?.specialization || "General Medicine"
-  };
-
-  // Patients data with actual image URLs
-  const [patients, setPatients] = useState([
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
-      lastMessage: "I'll send you my latest vitals",
-      timestamp: "09:45 AM",
-      unread: 2,
-      status: "online"
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80", 
-      lastMessage: "Thank you for the prescription",
-      timestamp: "Yesterday",
-      unread: 0,
-      status: "offline"
-    },
-    {
-      id: 3,
-      name: "Lisa Rodriguez",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
-      lastMessage: "When should I schedule my follow-up?",
-      timestamp: "Yesterday",
-      unread: 1,
-      status: "online"
-    },
-    {
-      id: 4,
-      name: "Robert Kim",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
-      lastMessage: "My fever has reduced",
-      timestamp: "Monday",
-      unread: 0,
-      status: "offline"
-    },
-    {
-      id: 5,
-      name: "Emma Thompson",
-      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80",
-      lastMessage: "Is this medication correct?",
-      timestamp: "Sunday",
-      unread: 0,
-      status: "away"
-    }
-  ]);
-
-  // Dummy message history
+  // Fetch patients from backend
   useEffect(() => {
-    const initialMessages = {};
-    patients.forEach(patient => {
-      initialMessages[patient.id] = [
-        {
-          id: `${patient.id}-1`,
-          sender: patient.id,
-          text: patient.lastMessage,
-          timestamp: patient.timestamp,
-          type: 'text'
-        },
-        {
-          id: `${patient.id}-2`,
-          sender: 'doctor',
-          text: "Thanks for the update. How are you feeling today?",
-          timestamp: "Just now",
-          type: 'text'
+    const fetchPatients = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('http://localhost:5000/api/patients');
+        if (!response.ok) {
+          throw new Error('Failed to fetch patients');
         }
-      ];
-    });
-    setMessages(initialMessages);
+        const data = await response.json();
+        
+        // Transform patient data to match the expected format
+        const formattedPatients = data.data.map(patient => ({
+          id: patient._id,
+          name: patient.firstName ? `${patient.firstName} ${patient.lastName || ''}`.trim() : patient.name,
+          email: patient.email,
+          phoneNumber: patient.phoneNumber,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(patient.firstName || patient.name || 'P')}&background=random`,
+          lastMessage: "No messages yet",
+          timestamp: new Date(patient.updatedAt || patient.createdAt).toLocaleDateString(),
+          unread: 0,
+          status: "offline"
+        }));
+        
+        setPatients(formattedPatients);
+      } catch (err) {
+        console.error('Error fetching patients:', err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPatients();
   }, []);
 
-  // Socket.io event listeners
+  // Update online status when socket connects
   useEffect(() => {
-    // Listen for incoming messages
-    socket.on('receive_message', (data) => {
-      setMessages(prev => {
-        const patientId = data.sender;
-        const newMessages = { ...prev };
-        if (newMessages[patientId]) {
-          newMessages[patientId] = [...newMessages[patientId], data];
-        } else {
-          newMessages[patientId] = [data];
-        }
-        return newMessages;
+    if (socket && patients.length > 0) {
+      // Request online status for all patients
+      socket.emit('get_online_status', { 
+        userIds: patients.map(p => p.id),
+        userType: 'doctor'
       });
-      
-      // Update the last message for the patient
-      setPatients(prev => 
-        prev.map(p => {
-          if (p.id === data.sender) {
-            return {
-              ...p,
-              lastMessage: data.text,
-              timestamp: 'Just now',
-              unread: currentChat?.id === data.sender ? 0 : (p.unread || 0) + 1
-            };
-          }
-          return p;
-        })
-      );
+    }
+  }, [socket, patients]);
+
+  // --- SOCKET.IO CONNECTION ---
+  useEffect(() => {
+    console.log('🔌 Doctor initializing socket connection...');
+    
+    const newSocket = io('http://localhost:5000', {
+      transports: ['websocket', 'polling'],
+      upgrade: true,
+      rememberUpgrade: true,
+      autoConnect: true,
+      forceNew: false,
+      timeout: 20000,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      maxReconnectionAttempts: 5
     });
 
-    // Listen for online status changes
-    socket.on('status_change', (data) => {
-      setPatients(prev => 
-        prev.map(p => {
-          if (p.id === data.userId) {
-            return { ...p, status: data.status };
-          }
-          return p;
-        })
-      );
+    socketRef.current = newSocket;
+    setSocket(newSocket);
+
+    // Connection events
+    newSocket.on('connect', () => {
+      console.log('✅ Doctor socket connected:', newSocket.id);
+      setIsConnected(true);
+      setConnectionStatus('connected');
+      setConnectionError(null);
+      setReconnectAttempts(0);
+      
+      // Authenticate immediately after connection
+      console.log('🔐 Doctor authenticating user...');
+      newSocket.emit('authenticate', {
+        userId: DOCTOR_PROFILE.id,
+        userType: 'doctor',
+        name: DOCTOR_PROFILE.name,
+        avatar: DOCTOR_PROFILE.avatar,
+        email: DOCTOR_PROFILE.email,
+        specialization: DOCTOR_PROFILE.specialization
+      });
+    });
+
+    newSocket.on('connected', (data) => {
+      console.log('🔌 Doctor connection confirmed:', data);
+    });
+
+    newSocket.on('authenticated', (data) => {
+      console.log('✅ Doctor authentication successful:', data);
+      setIsAuthenticated(true);
+      setConnectionStatus('authenticated');
+    });
+
+    newSocket.on('auth_error', (error) => {
+      console.error('❌ Doctor authentication failed:', error);
+      setConnectionError(`Authentication failed: ${error.message}`);
+      setIsAuthenticated(false);
+      setConnectionStatus('auth_error');
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('❌ Doctor socket disconnected:', reason);
+      setIsConnected(false);
+      setIsAuthenticated(false);
+      setConnectionStatus('disconnected');
+      setCurrentRoom(null);
+      setConnectionError(`Connection lost: ${reason}. Attempting to reconnect...`);
+      
+      // End any ongoing call
+      if (isInCall) {
+        endCall();
+      }
+      
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+      setReconnectAttempts(prev => prev + 1);
+      
+      if (reconnectAttempts < 5) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('🔄 Doctor attempting to reconnect...');
+          newSocket.connect();
+        }, delay);
+      }
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ Doctor connection error:', error);
+      setConnectionError(`Connection failed: ${error.message}`);
+      setIsConnected(false);
+      setIsAuthenticated(false);
+      setConnectionStatus('error');
+    });
+
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('🔄 Doctor reconnected after', attemptNumber, 'attempts');
+      setConnectionStatus('connected');
+      setReconnectAttempts(0);
+    });
+
+    // Message events
+    newSocket.on('new_message', (messageData) => {
+      console.log('📨 Doctor received new message:', messageData);
+      const patientId = messageData.senderType === 'doctor' ? messageData.patientId : messageData.senderId;
+      
+      setMessages(prev => {
+        const newMessages = { ...prev };
+        if (!newMessages[patientId]) newMessages[patientId] = [];
+        
+        // Avoid duplicate messages
+        const messageExists = newMessages[patientId].some(msg => 
+          msg.id === messageData.id || 
+          (msg.timestamp === messageData.timestamp && msg.text === messageData.text)
+        );
+        
+        if (!messageExists) {
+          newMessages[patientId] = [...newMessages[patientId], messageData];
+        }
+        
+        return newMessages;
+      });
+
+      // Update patient last message info
+      if (messageData.senderType === 'patient') {
+        setPatients(prev => 
+          prev.map(p => {
+            if (p.id === patientId) {
+              return {
+                ...p,
+                lastMessage: messageData.text || `${messageData.type} message`,
+                timestamp: 'Just now',
+                unread: currentChat?.id === patientId ? 0 : (p.unread || 0) + 1
+              };
+            }
+            return p;
+          })
+        );
+      }
+    });
+
+    newSocket.on('message_sent', (data) => {
+      console.log('✅ Doctor message sent confirmation:', data);
+    });
+
+    newSocket.on('room_joined', (data) => {
+      console.log('🏠 Doctor room joined:', data);
+      setCurrentRoom(data.roomId);
+      
+      if (data.messages && data.messages.length > 0) {
+        const patientId = data.patientId || (currentChat && currentChat.id);
+        if (patientId) {
+          setMessages(prev => ({
+            ...prev,
+            [patientId]: data.messages
+          }));
+        }
+      } else if (currentChat) {
+        // Initialize empty message array if no messages exist
+        setMessages(prev => ({
+          ...prev,
+          [currentChat.id]: []
+        }));
+      }
+    });
+
+    // Status events
+    newSocket.on('user_status_change', (data) => {
+      console.log('👤 Doctor received user status change:', data);
+      if (data.userType === 'patient') {
+        setPatients(prev => 
+          prev.map(p => {
+            if (p.id === data.userId) {
+              return { ...p, status: data.status };
+            }
+            return p;
+          })
+        );
+        
+        if (data.status === 'online') {
+          setOnlinePatients(prev => new Set([...prev, data.userId]));
+        } else {
+          setOnlinePatients(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(data.userId);
+            return newSet;
+          });
+        }
+      }
+    });
+
+    newSocket.on('user_typing', (data) => {
+      console.log('⌨️ Doctor received user typing:', data);
+      if (data.userType === 'patient') {
+        setTypingUsers(prev => new Set([...prev, data.userId]));
+      }
+    });
+
+    newSocket.on('user_stop_typing', (data) => {
+      console.log('⌨️ Doctor received user stopped typing:', data);
+      if (data.userType === 'patient') {
+        setTypingUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(data.userId);
+          return newSet;
+        });
+      }
+    });
+
+    // WebRTC Call Events
+    newSocket.on('call_request', handleIncomingCall);
+    newSocket.on('call_accepted', handleCallAccepted);
+    newSocket.on('call_rejected', handleCallRejected);
+    newSocket.on('call_ended', handleCallEnded);
+    newSocket.on('webrtc_offer', handleWebRTCOffer);
+    newSocket.on('webrtc_answer', handleWebRTCAnswer);
+    newSocket.on('webrtc_ice_candidate', handleWebRTCIceCandidate);
+    newSocket.on('call_timeout', handleCallTimeout);
+
+    // Room management events
+    newSocket.on('user_joined_room', (data) => {
+      console.log('🏠 User joined room:', data);
+    });
+
+    newSocket.on('user_left_room', (data) => {
+      console.log('🚪 User left room:', data);
+    });
+
+    // Error events
+    newSocket.on('error', (error) => {
+      console.error('🚨 Doctor socket error:', error);
+      setConnectionError(error.message || 'Unknown error occurred');
+    });
+
+    newSocket.on('force_disconnect', (data) => {
+      console.log('🔌 Doctor force disconnect:', data);
+      setConnectionError(data.reason || 'Disconnected by server');
+    });
+
+    // Ping/Pong for connection health
+    newSocket.on('pong', (data) => {
+      console.log('🏓 Pong received:', data);
     });
 
     return () => {
-      socket.off('receive_message');
-      socket.off('status_change');
+      console.log('🧹 Doctor cleaning up socket connection...');
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (callDurationIntervalRef.current) clearInterval(callDurationIntervalRef.current);
+      
+      // Cleanup WebRTC
+      cleanupWebRTC();
+      
+      newSocket.disconnect();
     };
-  }, [currentChat]);
+  }, []);
 
-  // Auto-scroll to bottom of chat when messages change
+  // Update patient list when receiving status updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleOnlineStatus = (data) => {
+      setPatients(prevPatients => 
+        prevPatients.map(patient => ({
+          ...patient,
+          status: data.onlineUsers.includes(patient.id) ? 'online' : 'offline'
+        }))
+      );
+    };
+
+    socket.on('online_status', handleOnlineStatus);
+    
+    return () => {
+      socket.off('online_status', handleOnlineStatus);
+    };
+  }, [socket]);
+
+  // --- WEBRTC CALL HANDLERS ---
+  const handleIncomingCall = (data) => {
+    console.log('📞 Incoming call from:', data.callerId);
+    setIsCallIncoming(true);
+    setIncomingCallData(data);
+    setCallStatus('ringing');
+  };
+
+  const handleCallAccepted = async (data) => {
+    console.log('✅ Call accepted by patient');
+    setCallStatus('connecting');
+    setIsCallIncoming(false);
+    
+    try {
+      await initializeWebRTC(data.callType, true);
+      setCallStatus('connected');
+      startCallTimer();
+    } catch (error) {
+      console.error('❌ Error initializing WebRTC:', error);
+      endCall();
+    }
+  };
+
+  const handleCallRejected = (data) => {
+    console.log('❌ Call rejected by patient');
+    setCallStatus('ended');
+    cleanupCall();
+  };
+
+  const handleCallEnded = (data) => {
+    console.log('📴 Call ended by patient');
+    setCallStatus('ended');
+    endCall();
+  };
+
+  const handleCallTimeout = (data) => {
+    console.log('⏰ Call timed out');
+    setCallStatus('ended');
+    cleanupCall();
+  };
+
+  const handleWebRTCOffer = async (data) => {
+    console.log('📡 Received WebRTC offer');
+    
+    if (!peerConnectionRef.current) {
+      await setupPeerConnection();
+    }
+
+    try {
+      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await peerConnectionRef.current.createAnswer();
+      await peerConnectionRef.current.setLocalDescription(answer);
+      
+      socket.emit('webrtc_answer', {
+        answer: answer,
+        callerId: data.callerId,
+        calleeId: DOCTOR_PROFILE.id
+      });
+    } catch (error) {
+      console.error('❌ Error handling WebRTC offer:', error);
+    }
+  };
+
+  const handleWebRTCAnswer = async (data) => {
+    console.log('📡 Received WebRTC answer');
+    
+    try {
+      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+    } catch (error) {
+      console.error('❌ Error handling WebRTC answer:', error);
+    }
+  };
+
+  const handleWebRTCIceCandidate = async (data) => {
+    console.log('🧊 Received ICE candidate');
+    
+    if (peerConnectionRef.current && data.candidate) {
+      try {
+        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+      } catch (error) {
+        console.error('❌ Error adding ICE candidate:', error);
+      }
+    }
+  };
+
+  // --- WEBRTC SETUP ---
+  const setupPeerConnection = async () => {
+    const peerConnection = new RTCPeerConnection(ICE_SERVERS);
+    peerConnectionRef.current = peerConnection;
+
+    // Handle ICE candidates
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate && socket) {
+        socket.emit('webrtc_ice_candidate', {
+          candidate: event.candidate,
+          callerId: DOCTOR_PROFILE.id,
+          calleeId: currentChat.id
+        });
+      }
+    };
+
+    // Handle remote stream
+    peerConnection.ontrack = (event) => {
+      console.log('📹 Received remote stream');
+      const [remoteStream] = event.streams;
+      remoteStreamRef.current = remoteStream;
+      
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+    };
+
+    // Handle connection state changes
+    peerConnection.onconnectionstatechange = () => {
+      console.log('🔗 Connection state:', peerConnection.connectionState);
+      
+      if (peerConnection.connectionState === 'connected') {
+        setCallStatus('connected');
+        startCallTimer();
+      } else if (peerConnection.connectionState === 'disconnected' || 
+                 peerConnection.connectionState === 'failed') {
+        endCall();
+      }
+    };
+
+    return peerConnection;
+  };
+
+  const initializeWebRTC = async (type, isInitiator = false) => {
+    try {
+      // Get user media
+      const constraints = {
+        audio: true,
+        video: type === 'video'
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+      
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Setup peer connection
+      const peerConnection = await setupPeerConnection();
+      
+      // Add local stream to peer connection
+      stream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, stream);
+      });
+
+      // If initiator, create offer
+      if (isInitiator) {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        socket.emit('webrtc_offer', {
+          offer: offer,
+          callerId: DOCTOR_PROFILE.id,
+          calleeId: currentChat.id
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Error initializing WebRTC:', error);
+      throw error;
+    }
+  };
+
+  // --- CALL FUNCTIONS ---
+  const initiateCall = async (type) => {
+    if (!currentChat || !socket || !socket.connected || !isAuthenticated) {
+      console.warn('⚠️ Cannot initiate call: missing requirements');
+      return;
+    }
+
+    console.log(`📞 Doctor initiating ${type} call to:`, currentChat.name);
+    
+    setIsInCall(true);
+    setCallType(type);
+    setCallStatus('calling');
+    
+    // Emit call request
+    socket.emit('call_request', {
+      callerId: DOCTOR_PROFILE.id,
+      calleeId: currentChat.id,
+      callerName: DOCTOR_PROFILE.name,
+      callerAvatar: DOCTOR_PROFILE.avatar,
+      callType: type,
+      roomId: currentRoom
+    });
+
+    // Set timeout for call request
+    setTimeout(() => {
+      if (callStatus === 'calling') {
+        console.log('⏰ Call request timed out');
+        setCallStatus('timeout');
+        cleanupCall();
+      }
+    }, 30000); // 30 second timeout
+  };
+
+  const acceptCall = async () => {
+    if (!incomingCallData) return;
+    
+    console.log('✅ Doctor accepting call');
+    setIsCallIncoming(false);
+    setIsInCall(true);
+    setCallType(incomingCallData.callType);
+    setCallStatus('connecting');
+    
+    socket.emit('call_accepted', {
+      callerId: incomingCallData.callerId,
+      calleeId: DOCTOR_PROFILE.id,
+      callType: incomingCallData.callType
+    });
+
+    try {
+      await initializeWebRTC(incomingCallData.callType, false);
+    } catch (error) {
+      console.error('❌ Error accepting call:', error);
+      endCall();
+    }
+  };
+
+  const rejectCall = () => {
+    if (!incomingCallData) return;
+    
+    console.log('❌ Doctor rejecting call');
+    setIsCallIncoming(false);
+    
+    socket.emit('call_rejected', {
+      callerId: incomingCallData.callerId,
+      calleeId: DOCTOR_PROFILE.id
+    });
+    
+    setIncomingCallData(null);
+    setCallStatus('idle');
+  };
+
+  const endCall = () => {
+    console.log('📴 Doctor ending call');
+    
+    if (socket && (isInCall || isCallIncoming)) {
+      socket.emit('call_ended', {
+        callerId: DOCTOR_PROFILE.id,
+        calleeId: currentChat?.id || incomingCallData?.callerId
+      });
+    }
+    
+    cleanupCall();
+  };
+
+  const cleanupCall = () => {
+    console.log('🧹 Cleaning up call');
+    
+    // Stop call timer
+    if (callDurationIntervalRef.current) {
+      clearInterval(callDurationIntervalRef.current);
+      callDurationIntervalRef.current = null;
+    }
+    
+    // Reset call states
+    setIsInCall(false);
+    setCallType(null);
+    setIsCallIncoming(false);
+    setIncomingCallData(null);
+    setCallStatus('idle');
+    setCallStartTime(null);
+    setCallDuration(0);
+    
+    // Cleanup WebRTC
+    cleanupWebRTC();
+  };
+
+  const cleanupWebRTC = () => {
+    // Stop local stream
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    
+    // Clear video elements
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    
+    // Close peer connection
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    remoteStreamRef.current = null;
+  };
+
+  const startCallTimer = () => {
+    setCallStartTime(Date.now());
+    setCallDuration(0);
+    
+    callDurationIntervalRef.current = setInterval(() => {
+      setCallDuration(prev => prev + 1);
+    }, 1000);
+  };
+
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoEnabled(videoTrack.enabled);
+      }
+    }
+  };
+
+  const formatCallDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // --- AUTO SCROLL ON MESSAGE ---
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, currentChat]);
 
-  // Handle message sending
-  const sendMessage = () => {
-    if (!message.trim() || !currentChat) return;
-    
-    const newMessage = {
-      id: `${Date.now()}`,
-      sender: 'doctor',
-      text: message,
-      timestamp: 'Just now',
-      type: 'text'
-    };
-    
-    // Update messages state
-    setMessages(prev => {
-      const patientId = currentChat.id;
-      const newMessages = { ...prev };
-      if (newMessages[patientId]) {
-        newMessages[patientId] = [...newMessages[patientId], newMessage];
-      } else {
-        newMessages[patientId] = [newMessage];
-      }
-      return newMessages;
-    });
-    
-    // Update last message for patient
-    setPatients(prev => 
-      prev.map(p => {
-        if (p.id === currentChat.id) {
-          return {
-            ...p,
-            lastMessage: message,
-            timestamp: 'Just now',
-            unread: 0
-          };
-        }
-        return p;
-      })
-    );
-    
-    // Send message via socket
-    socket.emit('send_message', {
-      sender: 'doctor',
-      receiver: currentChat.id,
-      text: message,
-      timestamp: 'Just now',
-      type: 'text'
-    });
-    
-    setMessage('');
+  // --- MESSAGE HANDLING ---
+  const getRoomId = (patientId) => {
+    const ids = [DOCTOR_PROFILE.id, patientId].sort();
+    return `room_${ids.join('_')}`;
   };
 
-  // Handle audio recording start
+  const fetchMessages = async (roomId) => {
+    if (!roomId) {
+      console.error('No roomId provided to fetchMessages');
+      return;
+    }
+    
+    try {
+      console.log('🔍 Fetching messages for room:', roomId);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      // Log the current chat info for debugging
+      console.log('📋 Current chat info:', {
+        currentChat,
+        roomId,
+        timestamp: new Date().toISOString()
+      });
+
+      const response = await fetch(`http://localhost:5000/api/messages/conversation/${roomId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to fetch messages: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to fetch messages: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📩 Fetched messages data:', {
+        roomId,
+        messageCount: data.messages?.length || 0,
+        messages: data.messages?.map(m => ({
+          id: m._id,
+          sender: m.senderName || 'Unknown',
+          text: m.text?.substring(0, 50) + (m.text?.length > 50 ? '...' : ''),
+          timestamp: m.timestamp || m.createdAt
+        }))
+      });
+      
+      setMessages(prev => ({
+        ...prev,
+        [roomId]: Array.isArray(data.messages) ? data.messages : (data || [])
+      }));
+    } catch (error) {
+      console.error('❌ Error in fetchMessages:', error);
+      setError(error.message);
+    }
+  };
+
+  const handleSelectChat = (patient) => {
+    console.log('Selecting chat with patient:', patient);
+    setCurrentChat(patient);
+    const roomId = getRoomId(patient.id);
+    console.log('Generated roomId:', roomId);
+    setCurrentRoom(roomId);
+    
+    // Join the room for real-time updates
+    if (socket) {
+      console.log('Joining room from handleSelectChat:', roomId);
+      socket.emit('join_room', { 
+        roomId, 
+        userId: DOCTOR_PROFILE.id,
+        userType: 'doctor'
+      }, (response) => {
+        console.log('Join room response:', response);
+        if (response?.success) {
+          fetchMessages(roomId);
+        } else {
+          console.error('Failed to join room:', response?.error);
+        }
+      });
+    } else {
+      console.error('Socket not available when selecting chat');
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (!message.trim() || !currentChat || !currentRoom) {
+      console.log('Cannot send message - missing data');
+      return;
+    }
+
+    const messageData = {
+      roomId: currentRoom,
+      doctorId: DOCTOR_PROFILE.id,
+      patientId: currentChat.id,
+      text: message,
+      type: 'text',
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('Sending message:', messageData);
+
+    // Emit message via socket
+    if (socket) {
+      socket.emit('send_message', messageData, (acknowledgement) => {
+        console.log('Message sent - server acknowledgement:', acknowledgement);
+        
+        // Update message status to delivered
+        if (acknowledgement?.success) {
+          setMessages(prev => {
+            const updated = { ...prev };
+            if (updated[currentRoom]) {
+              updated[currentRoom] = updated[currentRoom].map(msg => 
+                msg._id === `temp-${acknowledgement.timestamp}`
+                  ? { ...msg, status: 'delivered', _id: acknowledgement.messageId }
+                  : msg
+              );
+            }
+            return updated;
+          });
+        }
+      });
+    }
+
+    // Update local state optimistically
+    const tempId = `temp-${Date.now()}`;
+    setMessages(prev => ({
+      ...prev,
+      [currentRoom]: [
+        ...(prev[currentRoom] || []), 
+        {
+          ...messageData,
+          _id: tempId,
+          senderId: DOCTOR_PROFILE.id,
+          status: 'sending',
+          createdAt: new Date().toISOString(),
+          senderType: 'doctor'
+        }
+      ]
+    }));
+
+    // Clear input and scroll to bottom
+    setMessage('');
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  };
+
+  // Handle incoming messages and socket events
+  useEffect(() => {
+    if (!socket) return;
+
+    const onConnect = () => {
+      console.log('✅ Socket connected:', socket.id);
+      setIsConnected(true);
+      
+      // Rejoin current room if we have one
+      if (currentRoom) {
+        console.log('Rejoining room after reconnect:', currentRoom);
+        socket.emit('join_room', { 
+          roomId: currentRoom,
+          userId: DOCTOR_PROFILE.id,
+          userType: 'doctor'
+        });
+      }
+    };
+
+    const onDisconnect = () => {
+      console.log('❌ Socket disconnected');
+      setIsConnected(false);
+    };
+
+    const onNewMessage = (message) => {
+      console.log('📩 New message received:', message);
+      
+      // Update messages for the current room
+      setMessages(prev => ({
+        ...prev,
+        [message.roomId]: [...(prev[message.roomId] || []), message]
+      }));
+
+      // Scroll to bottom when new message arrives
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    };
+
+    // Set up event listeners
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('new_message', onNewMessage);
+    socket.on('receive_message', onNewMessage); // For backward compatibility
+
+    // Clean up
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('new_message', onNewMessage);
+      socket.off('receive_message', onNewMessage);
+    };
+  }, [socket, currentRoom]);
+
+  // --- HANDLE TYPING INDICATOR ---
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleTyping = () => {
+    if (!currentChat || !socket || !socket.connected || !isAuthenticated) return;
+    
+    socket.emit('typing', {
+      doctorId: DOCTOR_PROFILE.id,
+      patientId: currentChat.id,
+      roomId: currentRoom
+    });
+    
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('stop_typing', {
+        doctorId: DOCTOR_PROFILE.id,
+        patientId: currentChat.id,
+        roomId: currentRoom
+      });
+    }, 2000);
+  };
+
+  // --- AUDIO RECORDING ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new window.MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
+      
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
-
+      
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
         const audioUrl = URL.createObjectURL(audioBlob);
         
-        // In a real app, you would upload this to your server
-        // and then send the URL via socket.io
-        
-        // For this demo, we'll just use the local URL
-        const newMessage = {
-          id: `${Date.now()}`,
-          sender: 'doctor',
-          audioUrl,
-          timestamp: 'Just now',
-          type: 'audio'
-        };
-        
-        setMessages(prev => {
-          const patientId = currentChat.id;
-          return {
-            ...prev,
-            [patientId]: [...(prev[patientId] || []), newMessage]
-          };
-        });
-        
-        // Update last message for patient
-        setPatients(prev => 
-          prev.map(p => {
-            if (p.id === currentChat.id) {
-              return {
-                ...p,
-                lastMessage: '🎤 Audio message',
-                timestamp: 'Just now',
-                unread: 0
-              };
-            }
-            return p;
-          })
-        );
-        
-        // In a real app, you'd emit this with the actual URL after upload
-        socket.emit('send_message', {
-          sender: 'doctor',
-          receiver: currentChat.id,
-          audioUrl, // This would be a server URL in production
-          timestamp: 'Just now',
-          type: 'audio'
-        });
+        if (socket && socket.connected && isAuthenticated && currentChat) {
+          socket.emit('send_message', {
+            doctorId: DOCTOR_PROFILE.id,
+            patientId: currentChat.id,
+            type: 'audio',
+            audioUrl,
+            roomId: currentRoom
+          });
+        }
+        stream.getTracks().forEach(track => track.stop());
       };
-
+      
       mediaRecorder.start();
       setIsRecording(true);
+      console.log('🎤 Recording started');
     } catch (err) {
-      console.error("Error accessing microphone:", err);
+      console.error('❌ Microphone access error:', err);
+      setConnectionError("Could not access microphone. Please check permissions.");
     }
   };
 
-  // Handle audio recording stop
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      
-      // Stop all audio tracks
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      console.log('🎤 Recording stopped');
     }
   };
 
-  // Handle initiating calls
-  const initiateCall = (type) => {
-    if (!currentChat) return;
-    
-    // In a real application, this would trigger your WebRTC logic
-    // For this demo, we'll just add a system message
-    const newMessage = {
-      id: `${Date.now()}`,
-      sender: 'system',
-      text: `${type === 'audio' ? 'Audio' : 'Video'} call initiated`,
-      timestamp: 'Just now',
-      type: 'system'
-    };
-    
-    setMessages(prev => {
-      const patientId = currentChat.id;
-      return {
-        ...prev,
-        [patientId]: [...(prev[patientId] || []), newMessage]
-      };
-    });
-    
-    alert(`Initiating ${type} call with ${currentChat.name}`);
-  };
-
-  // Handle patient selection
-  const selectPatient = (patient) => {
-    setCurrentChat(patient);
-    // Mark messages as read
-    setPatients(prev => 
-      prev.map(p => {
-        if (p.id === patient.id) {
-          return { ...p, unread: 0 };
-        }
-        return p;
-      })
-    );
-  };
-
-  // Filter patients based on search term
+  // --- FILTER PATIENTS ---
   const filteredPatients = patients.filter(patient => 
     patient.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Format message timestamp
+  // --- FORMAT TIMESTAMP ---
   const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    return timestamp;
-    // In a real app, you'd use proper date formatting
+    if (!timestamp || timestamp === 'Just now') return timestamp || '';
+    try {
+      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return timestamp;
+    }
   };
 
-  // Status indicator component
+  // --- STATUS INDICATOR ---
   const StatusIndicator = ({ status }) => {
     const statusColors = {
       online: 'bg-green-500',
       offline: 'bg-gray-400',
       away: 'bg-yellow-500'
     };
-    
     return (
       <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${statusColors[status]} ring-2 ring-white`}></span>
     );
   };
-  
-  // Handle navigation back to dashboard
-  const handleBackToDashboard = () => {
-    try {
-      navigate('/dashboard');
-    } catch (error) {
-      console.error("Navigation error:", error);
-      // Fallback navigation in case the navigate function fails
-      window.location.href = '/dashboard';
+
+  // --- CONNECTION STATUS ---
+  const ConnectionStatus = () => {
+    const getStatusColor = () => {
+      if (isConnected && isAuthenticated) return 'bg-green-100 text-green-800';
+      if (isConnected && !isAuthenticated) return 'bg-yellow-100 text-yellow-800';
+      return 'bg-red-100 text-red-800';
+    };
+
+    const getStatusText = () => {
+      if (isConnected && isAuthenticated) return 'Connected';
+      if (isConnected && !isAuthenticated) return 'Authenticating...';
+      return `Disconnected ${reconnectAttempts > 0 ? `(${reconnectAttempts})` : ''}`;
+    };
+
+    return (
+      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${getStatusColor()}`}>
+        {isConnected && isAuthenticated ? 
+          <Wifi className="w-3 h-3" /> : 
+          <WifiOff className="w-3 h-3" />
+        }
+        {getStatusText()}
+      </div>
+    );
+  };
+
+  // --- HANDLE CONNECTION RETRY ---
+  const handleRetryConnection = () => {
+    if (socket && !socket.connected) {
+      console.log('🔄 Manual reconnection attempt...');
+      setConnectionError(null);
+      socket.connect();
     }
   };
 
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-base-100 to-base-200 transition-all duration-500">
-      {/* Patients sidebar */}
-      <div className="w-80 bg-white flex flex-col border-r border-gray-200 shadow-lg">
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="avatar">
-              <div className="w-10 h-10 rounded-full ring-2 ring-white">
-                <img src={doctorProfile.avatar} alt="Doctor" className="object-cover" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold">Dr. {doctorProfile.name}</h2>
-              <p className="text-sm text-white/80">{doctorProfile.email}</p>
-            </div>
-            <button 
-              onClick={handleBackToDashboard}
-              className="btn btn-circle btn-sm btn-ghost hover:bg-white/20 transition-all duration-300"
-              title="Back to Dashboard"
+  // --- INCOMING CALL MODAL ---
+  const IncomingCallModal = () => {
+    if (!isCallIncoming || !incomingCallData) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 text-center">
+          <div className="mb-4">
+            <img 
+              src={incomingCallData.callerAvatar} 
+              alt={incomingCallData.callerName}
+              className="w-20 h-20 rounded-full mx-auto mb-4"
+            />
+            <h3 className="text-lg font-semibold text-gray-900">{incomingCallData.callerName}</h3>
+            <p className="text-gray-600 capitalize">Incoming {incomingCallData.callType} call</p>
+          </div>
+          
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={rejectCall}
+              className="bg-red-500 text-white p-4 rounded-full hover:bg-red-600 transition-colors"
             >
-              <ChevronLeft size={18} />
+              <PhoneOff className="w-6 h-6" />
+            </button>
+            <button
+              onClick={acceptCall}
+              className="bg-green-500 text-white p-4 rounded-full hover:bg-green-600 transition-colors"
+            >
+              <Phone className="w-6 h-6" />
             </button>
           </div>
         </div>
-        
-        {/* Search box */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search patients..."
-              className="input w-full pl-10 bg-gray-50 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-3 hover:scale-110 transition-transform duration-300"
+      </div>
+    );
+  };
+
+  // --- CALL INTERFACE ---
+  const CallInterface = () => {
+    if (!isInCall) return null;
+
+    return (
+      <div className="fixed inset-0 bg-gray-900 flex flex-col z-50">
+        {/* Call Header */}
+        <div className="bg-gray-800 p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img 
+                src={currentChat?.avatar} 
+                alt={currentChat?.name}
+                className="w-10 h-10 rounded-full"
+              />
+              <div>
+                <h3 className="font-semibold">{currentChat?.name}</h3>
+                <p className="text-sm text-gray-300 capitalize">
+                  {callStatus === 'connected' ? `${callType} call • ${formatCallDuration(callDuration)}` : 
+                   callStatus === 'calling' ? 'Calling...' :
+                   callStatus === 'connecting' ? 'Connecting...' : callStatus}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Area */}
+        <div className="flex-1 relative">
+          {callType === 'video' ? (
+            <>
+              {/* Remote Video */}
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Local Video */}
+              <div className="absolute top-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </>
+          ) : (
+            /* Audio Call UI */
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-white">
+                <img 
+                  src={currentChat?.avatar} 
+                  alt={currentChat?.name}
+                  className="w-32 h-32 rounded-full mx-auto mb-4"
+                />
+                <h2 className="text-2xl font-semibold mb-2">{currentChat?.name}</h2>
+                <p className="text-gray-300">
+                  {callStatus === 'connected' ? formatCallDuration(callDuration) : 
+                   callStatus === 'calling' ? 'Calling...' :
+                   callStatus === 'connecting' ? 'Connecting...' : callStatus}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Call Controls */}
+        <div className="bg-gray-800 p-6">
+          <div className="flex justify-center gap-4">
+            {/* Mute Button */}
+            <button
+              onClick={toggleMute}
+              className={`p-4 rounded-full transition-colors ${
+                isMuted ? 'bg-red-500 text-white' : 'bg-gray-600 text-white hover:bg-gray-500'
+              }`}
+            >
+              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+            </button>
+
+            {/* Video Toggle (only for video calls) */}
+            {callType === 'video' && (
+              <button
+                onClick={toggleVideo}
+                className={`p-4 rounded-full transition-colors ${
+                  !isVideoEnabled ? 'bg-red-500 text-white' : 'bg-gray-600 text-white hover:bg-gray-500'
+                }`}
               >
-                <X size={16} className="text-gray-400" />
+                {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
               </button>
             )}
+
+            {/* Volume Button */}
+            <button className="p-4 bg-gray-600 text-white rounded-full hover:bg-gray-500 transition-colors">
+              <Volume2 className="w-6 h-6" />
+            </button>
+
+            {/* End Call Button */}
+            <button
+              onClick={endCall}
+              className="p-4 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            >
+              <PhoneOff className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Incoming Call Modal */}
+      <IncomingCallModal />
+      
+      {/* Call Interface */}
+      <CallInterface />
+
+      {/* --- PATIENTS SIDEBAR --- */}
+      <div className="w-80 bg-white flex flex-col border-r border-gray-200 shadow-lg">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={DOCTOR_PROFILE.avatar} 
+                  alt={DOCTOR_PROFILE.name}
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white"
+                />
+                <StatusIndicator status="online" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-white">{DOCTOR_PROFILE.name}</h2>
+                <p className="text-blue-100 text-sm">{DOCTOR_PROFILE.specialization}</p>
+              </div>
+            </div>
+            <ConnectionStatus />
           </div>
         </div>
         
-        {/* Patients list */}
-        <div className="overflow-y-auto flex-1">
-          {filteredPatients.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              No patients found
+        {/* Search */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search patients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        
+        {/* Connection Error */}
+        {connectionError && (
+          <div className="mx-4 mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+              <span className="text-sm text-yellow-800">{connectionError}</span>
             </div>
-          ) : (
-            filteredPatients.map(patient => (
-              <div
-                key={patient.id}
-                className={`p-4 border-b border-gray-100 cursor-pointer transition-all duration-300 hover:bg-emerald-50 ${
-                  currentChat?.id === patient.id ? 'bg-emerald-100' : ''
-                }`}
-                onClick={() => selectPatient(patient)}
+            {!isConnected && (
+              <button
+                onClick={handleRetryConnection}
+                className="text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="avatar">
-                      <div className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-white">
-                        <img src={patient.avatar} alt={patient.name} className="object-cover" />
-                      </div>
-                    </div>
-                    <StatusIndicator status={patient.status} />
+                Retry Connection
+              </button>
+            )}
+          </div>
+        )}
+        
+        {/* Patients List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredPatients.map((patient) => (
+            <div
+              key={patient.id}
+              onClick={() => handleSelectChat(patient)}
+              className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                currentChat?.id === patient.id ? 'bg-blue-50 border-r-4 border-r-blue-500' : ''
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <img 
+                    src={patient.avatar} 
+                    alt={patient.name}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <StatusIndicator status={patient.status} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-gray-900 truncate">{patient.name}</h3>
+                    <span className="text-xs text-gray-500">{formatTime(patient.timestamp)}</span>
                   </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline">
-                      <h3 className="font-medium truncate text-gray-800">{patient.name}</h3>
-                      <span className="text-xs text-gray-500">{patient.timestamp}</span>
-                    </div>
-                    <p className="text-sm truncate text-gray-500">{patient.lastMessage}</p>
-                  </div>
-                  
-                  {patient.unread > 0 && (
-                    <div className="flex items-center justify-center h-5 w-5 rounded-full bg-emerald-500 text-white text-xs">
-                      {patient.unread}
-                    </div>
+                  <p className="text-sm text-gray-600 truncate mt-1">{patient.lastMessage}</p>
+                  {typingUsers.has(patient.id) && (
+                    <p className="text-xs text-blue-600 italic mt-1">Typing...</p>
                   )}
                 </div>
+                {patient.unread > 0 && (
+                  <div className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {patient.unread}
+                  </div>
+                )}
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       </div>
       
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col bg-white">
+      {/* --- CHAT AREA --- */}
+      <div className="flex-1 flex flex-col">
         {currentChat ? (
           <>
-            {/* Chat header */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 border-b border-gray-200 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="avatar">
-                    <div className="w-10 h-10 rounded-full ring-2 ring-white">
-                      <img src={currentChat.avatar} alt={currentChat.name} className="object-cover" />
-                    </div>
+            {/* Chat Header */}
+            <div className="p-4 border-b border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <img 
+                      src={currentChat.avatar} 
+                      alt={currentChat.name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                    <StatusIndicator status={currentChat.status} />
                   </div>
-                  <StatusIndicator status={currentChat.status} />
-                </div>
-                <div>
-                  <h3 className="font-medium">{currentChat.name}</h3>
-                  <p className="text-xs text-white/80">
-                    {currentChat.status === 'online' ? 'Online' : 
-                     currentChat.status === 'away' ? 'Away' : 'Last seen recently'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => initiateCall('audio')}
-                  className="btn btn-circle btn-ghost hover:bg-white/20 transition-all duration-300 tooltip"
-                  data-tip="Audio call"
-                >
-                  <Phone size={20} />
-                </button>
-                <button 
-                  onClick={() => initiateCall('video')}
-                  className="btn btn-circle btn-ghost hover:bg-white/20 transition-all duration-300 tooltip"
-                  data-tip="Video call"
-                >
-                  <Video size={20} />
-                </button>
-                <button className="btn btn-circle btn-ghost hover:bg-white/20 transition-all duration-300 tooltip" data-tip="More options">
-                  <MoreVertical size={20} />
-                </button>
-              </div>
-            </div>
-            
-            {/* Messages area */}
-            <div 
-              ref={chatContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
-            >
-              {messages[currentChat.id]?.map((msg, idx) => (
-                <div
-                  key={msg.id || idx}
-                  className={`flex ${msg.sender === 'doctor' ? 'justify-end' : 
-                               msg.sender === 'system' ? 'justify-center' : 'justify-start'} transition-all duration-300`}
-                >
-                  {msg.sender !== 'system' && (
-                    <div className="avatar mr-2 self-end">
-                      <div className="w-8 rounded-full ring-2 ring-white">
-                        <img 
-                          src={msg.sender === 'doctor' ? doctorProfile.avatar : currentChat.avatar} 
-                          alt={msg.sender === 'doctor' ? 'Doctor' : currentChat.name} 
-                          className="object-cover"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className={`max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl ${
-                    msg.sender === 'system' ? 'text-center' : ''
-                  }`}>
-                    {msg.sender !== 'system' && (
-                      <div className={`text-xs opacity-70 mb-1 ${
-                        msg.sender === 'doctor' ? 'text-right' : 'text-left'
-                      }`}>
-                        {msg.sender === 'doctor' ? 'You' : currentChat.name}
-                        {msg.timestamp && <span className="ml-1">{formatTime(msg.timestamp)}</span>}
-                      </div>
-                    )}
-                    
-                    {msg.type === 'system' ? (
-                      <div className="inline-block px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-sm">
-                        {msg.text}
-                      </div>
-                    ) : msg.type === 'audio' ? (
-                      <div className={`p-3 rounded-xl ${
-                        msg.sender === 'doctor' ? 
-                        'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 
-                        'bg-gray-200 text-gray-800'
-                      }`}>
-                        <audio controls src={msg.audioUrl} className="max-w-xs"></audio>
-                      </div>
-                    ) : (
-                      <div className={`p-3 rounded-xl ${
-                        msg.sender === 'doctor' ? 
-                        'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 
-                        'bg-gray-200 text-gray-800'
-                      } transition-all duration-300 hover:shadow-md`}>
-                        {msg.text}
-                      </div>
-                    )}
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{currentChat.name}</h3>
+                    <p className="text-sm text-gray-600 capitalize">
+                      {currentChat.status} {currentRoom && `• Room: ${currentRoom.split('_').pop()}`}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-            
-            {/* Message input */}
-            <div className="p-4 bg-white border-t border-gray-200">
-              {isRecording ? (
-                <div className="flex items-center justify-between bg-red-50 p-3 rounded-xl border border-red-100 animate-pulse">
-                  <div className="flex items-center gap-2 text-red-600">
-                    <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                    <span>Recording audio message...</span>
-                  </div>
-                  <button 
-                    onClick={stopRecording}
-                    className="btn btn-circle btn-sm btn-ghost text-red-600 hover:bg-red-100 transition-all duration-300"
-                  >
-                    <PauseCircle size={20} />
-                  </button>
-                </div>
-              ) : (
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={startRecording}
-                    className="btn btn-circle btn-ghost hover:bg-emerald-100 text-emerald-600 transition-all duration-300 hover:scale-110" 
-                    title="Record audio message"
+                    onClick={() => initiateCall('audio')}
+                    disabled={!isConnected || !isAuthenticated || isInCall}
+                    className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Mic size={20} />
+                    <Phone className="w-5 h-5" />
                   </button>
-                  
-                  <input
-                    type="text"
-                    placeholder="Type a message..."
-                    className="input flex-1 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  />
-                  
                   <button 
-                    onClick={sendMessage}
-                    className={`btn btn-circle transition-all duration-300 ${
-                      message.trim() ? 
-                      'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' : 
-                      'btn-ghost opacity-50'
-                    } hover:shadow-lg hover:-translate-y-1`}
-                    disabled={!message.trim()}
+                    onClick={() => initiateCall('video')}
+                    disabled={!isConnected || !isAuthenticated || isInCall}
+                    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send size={20} />
+                    <Video className="w-5 h-5" />
                   </button>
+                  <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors">
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Messages */}
+            <div 
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
+              {currentRoom && messages[currentRoom]?.length > 0 ? (
+                messages[currentRoom].map((msg) => (
+                  <div 
+                    key={msg._id || msg.timestamp}
+                    className={`flex ${msg.senderId === DOCTOR_PROFILE.id ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div 
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        msg.senderId === DOCTOR_PROFILE.id 
+                          ? 'bg-blue-500 text-white rounded-br-none' 
+                          : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                      }`}
+                    >
+                      <p className="text-sm">{msg.message}</p>
+                      <p className="text-xs opacity-70 text-right mt-1">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {msg.status === 'sent' && <Check className="inline ml-1 h-3 w-3" />}
+                        {msg.status === 'delivered' && <Check className="inline ml-1 h-3 w-3" />}
+                        {msg.status === 'read' && <Check className="inline ml-1 h-3 w-3 text-blue-600" />}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <p>No messages yet. Start the conversation!</p>
                 </div>
               )}
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-br from-gray-50 to-white">
-            <div className="avatar">
-              <div className="w-24 h-24 rounded-full ring-4 ring-emerald-100">
-                <img src={doctorProfile.avatar} alt="Doctor" className="object-cover" />
+            
+            {/* Message Input */}
+            <div className="p-4 border-t border-gray-200 bg-white">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <textarea
+                    value={message}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      handleTyping();
+                    }}
+                    onKeyPress={handleKeyPress}
+                    placeholder={isAuthenticated ? "Type your message..." : "Connecting..."}
+                    className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows="1"
+                    style={{ minHeight: '44px', maxHeight: '120px' }}
+                    disabled={!isConnected || !isAuthenticated || isInCall}
+                  />
+                </div>
+                <button
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={!isConnected || !isAuthenticated || isInCall}
+                  className={`p-3 rounded-lg transition-colors disabled:opacity-50 ${
+                    isRecording 
+                      ? 'bg-red-500 text-white' 
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  {isRecording ? <PauseCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!message.trim() || !isConnected || !isAuthenticated || isInCall}
+                  className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Status info */}
+              <div className="mt-2 text-xs text-gray-500 text-center">
+                {!isConnected ? 'Connecting to server...' : 
+                 !isAuthenticated ? 'Authenticating...' : 
+                 isInCall ? `In ${callType} call with ${currentChat.name}` :
+                 currentChat ? `Chatting with ${currentChat.name}${currentRoom ? ` in ${currentRoom}` : ''}` : 'Select a patient to start chatting'}
               </div>
             </div>
-            <h3 className="mt-6 text-2xl font-bold text-gray-800">Welcome, Dr. {doctorProfile.name}</h3>
-            <p className="text-gray-600 mt-3 max-w-md">
-              Select a patient from the list to start a conversation.
-              You can send messages, voice recordings, and initiate audio/video calls.
-            </p>
-            <div className="mt-6 flex gap-4">
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                <Phone size={24} className="text-emerald-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-700">Audio Calls</p>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-12 h-12 text-gray-400" />
               </div>
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                <Video size={24} className="text-emerald-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-700">Video Calls</p>
-              </div>
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                <Mic size={24} className="text-emerald-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-700">Voice Messages</p>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">Select a Patient</h3>
+              <p className="text-gray-600 mb-4">Choose a patient from the sidebar to start chatting</p>
+              {!isConnected && (
+                <div className="space-y-2">
+                  <p className="text-red-600 text-sm">⚠️ Not connected to server</p>
+                  <button
+                    onClick={handleRetryConnection}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
