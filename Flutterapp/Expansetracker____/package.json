@@ -1,0 +1,23 @@
+{
+  "name": "expansetracker-cardio",
+  "version": "1.0.0",
+  "description": "Cardio patient tracking application with Flutter frontend and Node.js backend",
+  "scripts": {
+    "backend": "cd lib/backend && npm install && npm run dev",
+    "backend-start": "cd lib/backend && npm start",
+    "install-backend": "cd lib/backend && npm install"
+  },
+  "keywords": [
+    "flutter",
+    "nodejs",
+    "cardio",
+    "patient",
+    "healthcare"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "multer": "^2.0.2",
+    "uuid": "^11.1.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "cardiolink-socket-bridge",
+  "version": "1.0.0",
+  "description": "Socket bridge server for Flutter Patient and React Doctor chat communication",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "node test-connection.js"
+  },
+  "keywords": ["socket.io", "bridge", "flutter", "react", "chat", "medical"],
+  "author": "CardioLink Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
