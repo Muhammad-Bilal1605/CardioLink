@@ -44,6 +44,7 @@ import DoctorChats from "./components/Chats/DoctorChats";
 import DoctorSetting from "./components/Setting/DoctorSetting";
 import { ProfileProvider } from './context/ProfileContext'; 
 import { PatientProvider } from './context/PatientContext';
+import DoctorChatsAgora from "./components/Chats/DoctorChatsAgora";
 
 // protect routes that require authentication
 const ProtectedRoute = ({ children }) => {
@@ -278,6 +279,8 @@ function App() {
               }
             />
 
+<Route path="/chats" element={<DoctorChatsAgora />} />
+
             {/* FOr heartbeat analysis */}
             <Route
               path='/heartbeat-analysis'
@@ -397,8 +400,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
 
-            <Route
+           <Route
               path='/radiologist-dashboard'
               element={
                 <ProtectedRoute>

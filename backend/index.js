@@ -1,3 +1,5 @@
+//Mern index.js  
+//c:\Users\PMLS\Desktop\CardioLink\CardioLink\backend\index.js
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -8,6 +10,8 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import http from "http";
 import { Server } from "socket.io";
+import pkg from 'agora-access-token';
+const { RtcTokenBuilder, RtcRole } = pkg;
 
 import { connectDB } from "./db/connectDB.js";
 
@@ -19,6 +23,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
+
+// Agora Configuration
+const AGORA_APP_ID = process.env.AGORA_APP_ID || '88a403916325401a8e5f04beff756692';
+const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE || '8407591dbbda46f9b4286093767b7e80';
 
 // Create HTTP server for Socket.IO
 const server = http.createServer(app);
@@ -171,6 +179,48 @@ app.get('/health', (req, res) => {
     activeConnections: io?.engine?.clientsCount || 0,
     socketIOEnabled: true
   });
+});
+
+// ========== AGORA TOKEN GENERATION ENDPOINT ==========
+// Agora Token Generation
+app.post('/api/videocall/generate-token', (req, res) => {
+  try {
+    const { channelName, uid } = req.body;
+    
+    console.log('Token request received:', { channelName, uid });
+    
+    if (!channelName) {
+      return res.status(400).json({ error: 'Channel name is required' });
+    }
+
+    const role = RtcRole.PUBLISHER;
+    const expirationTimeInSeconds = 3600;
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+    
+    const uidInt = uid ? parseInt(uid) : 0;
+
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      AGORA_APP_ID,
+      AGORA_APP_CERTIFICATE,
+      channelName,
+      uidInt,
+      role,
+      privilegeExpiredTs
+    );
+
+    console.log('Token generated successfully for channel:', channelName);
+
+    res.json({
+      token,
+      appId: AGORA_APP_ID,
+      channelName,
+      uid: uidInt
+    });
+  } catch (error) {
+    console.error('Error generating Agora token:', error);
+    res.status(500).json({ error: 'Failed to generate token' });
+  }
 });
 
 // ========== SOCKET.IO IMPLEMENTATION ==========
@@ -454,6 +504,169 @@ io.on('connection', (socket) => {
     }
   });
   
+  // ========== AGORA VIDEO CALL EVENTS ==========
+  
+  // Handle call request (initiate call)
+  socket.on('call_request', (data) => {
+    try {
+      const { callerId, calleeId, callerName, callerAvatar, callType, roomId } = data;
+      
+      console.log(`📞 Call request from ${callerId} to ${calleeId}:`, { callType, roomId });
+      
+      if (!callerId || !calleeId || !roomId) {
+        socket.emit('call_error', { message: 'Missing required call data' });
+        return;
+      }
+
+      // Find callee's socket sessions
+      const calleeSessions = userSessions.get(calleeId) || [];
+      
+      if (calleeSessions.length === 0) {
+        console.log(`❌ Callee ${calleeId} not online`);
+        socket.emit('call_error', { message: 'User is not online' });
+        return;
+      }
+
+      // Send call request to all callee's sessions
+      calleeSessions.forEach(sessionSocketId => {
+        io.to(sessionSocketId).emit('call_request', {
+          callerId,
+          callerName,
+          callerAvatar,
+          callType,
+          roomId,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      console.log(`✅ Call request sent to ${calleeId}`);
+      
+    } catch (error) {
+      console.error('❌ Call request error:', error);
+      socket.emit('call_error', { message: `Call request failed: ${error.message}` });
+    }
+  });
+
+  // Handle call accepted
+  socket.on('call_accepted', (data) => {
+    try {
+      const { callerId, calleeId, callType, roomId } = data;
+      
+      console.log(`✅ Call accepted by ${calleeId}:`, { roomId });
+      
+      if (!callerId || !calleeId || !roomId) {
+        socket.emit('call_error', { message: 'Missing required call data' });
+        return;
+      }
+
+      // Notify caller that call was accepted
+      const callerSessions = userSessions.get(callerId) || [];
+      
+      callerSessions.forEach(sessionSocketId => {
+        io.to(sessionSocketId).emit('call_accepted', {
+          calleeId,
+          callType,
+          roomId,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      console.log(`✅ Call acceptance sent to ${callerId}`);
+      
+    } catch (error) {
+      console.error('❌ Call accepted error:', error);
+      socket.emit('call_error', { message: `Call acceptance failed: ${error.message}` });
+    }
+  });
+
+  // Handle call rejected
+  socket.on('call_rejected', (data) => {
+    try {
+      const { callerId, calleeId, roomId } = data;
+      
+      console.log(`❌ Call rejected by ${calleeId}:`, { roomId });
+      
+      if (!callerId) {
+        return;
+      }
+
+      // Notify caller that call was rejected
+      const callerSessions = userSessions.get(callerId) || [];
+      
+      callerSessions.forEach(sessionSocketId => {
+        io.to(sessionSocketId).emit('call_rejected', {
+          calleeId,
+          roomId,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      console.log(`✅ Call rejection sent to ${callerId}`);
+      
+    } catch (error) {
+      console.error('❌ Call rejected error:', error);
+    }
+  });
+
+  // Handle call ended
+  socket.on('call_ended', (data) => {
+    try {
+      const { callerId, calleeId, roomId } = data;
+      
+      console.log(`📞 Call ended:`, { callerId, calleeId, roomId });
+      
+      // Notify both parties
+      const callerSessions = userSessions.get(callerId) || [];
+      const calleeSessions = userSessions.get(calleeId) || [];
+      
+      const allSessions = [...callerSessions, ...calleeSessions];
+      
+      allSessions.forEach(sessionSocketId => {
+        if (sessionSocketId !== socket.id) {
+          io.to(sessionSocketId).emit('call_ended', {
+            roomId,
+            endedBy: callerId,
+            timestamp: new Date().toISOString()
+          });
+        }
+      });
+
+      console.log(`✅ Call end notification sent`);
+      
+    } catch (error) {
+      console.error('❌ Call ended error:', error);
+    }
+  });
+
+  // Handle call timeout
+  socket.on('call_timeout', (data) => {
+    try {
+      const { callerId, calleeId, roomId } = data;
+      
+      console.log(`⏰ Call timeout:`, { roomId });
+      
+      // Notify both parties
+      if (callerId) {
+        const callerSessions = userSessions.get(callerId) || [];
+        callerSessions.forEach(sessionSocketId => {
+          io.to(sessionSocketId).emit('call_timeout', { roomId });
+        });
+      }
+      
+      if (calleeId) {
+        const calleeSessions = userSessions.get(calleeId) || [];
+        calleeSessions.forEach(sessionSocketId => {
+          io.to(sessionSocketId).emit('call_timeout', { roomId });
+        });
+      }
+      
+      console.log(`✅ Call timeout notification sent`);
+      
+    } catch (error) {
+      console.error('❌ Call timeout error:', error);
+    }
+  });
+  
   // Handle typing indicators
   socket.on('typing', (data) => {
     try {
@@ -668,6 +881,8 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`🔌 Socket.IO enabled and ready for connections`);
+      console.log(`📞 Agora video call events integrated`);
+      console.log(`🔑 Agora token generation endpoint: POST /api/videocall/generate-token`);
       console.log(`📋 Health check: http://localhost:${PORT}/health`);
     });
   } catch (error) {

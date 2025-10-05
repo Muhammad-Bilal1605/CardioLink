@@ -1,6 +1,8 @@
+//c:CardioLink/frontend/src/components/Chats/DoctorChats.jsx (Mern Stack)
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Video, Mic, Send, MoreVertical, Search, PauseCircle, Check, AlertCircle, Wifi, WifiOff, PhoneOff, VideoOff, Volume2, MicOff } from 'lucide-react';
 import { io } from 'socket.io-client';
+import NewVideocallComponent from './NewVideocallComponent';
 
 const DOCTOR_PROFILE = {
   id: 'doctor_001',
@@ -47,6 +49,9 @@ const DoctorChats = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [callStartTime, setCallStartTime] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
+
+  // New State for Video Call Component
+  const [showVideoCallComponent, setShowVideoCallComponent] = useState(false);
 
   // Refs
   const chatContainerRef = useRef(null);
@@ -713,6 +718,19 @@ const DoctorChats = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // --- NEW VIDEO CALL COMPONENT HANDLER ---
+  const handleNewVideoCall = () => {
+    if (!currentChat) {
+      alert('Please select a patient first to start a video call');
+      return;
+    }
+    setShowVideoCallComponent(true);
+  };
+
+  const handleCloseVideoCall = () => {
+    setShowVideoCallComponent(false);
+  };
+
   // --- AUTO SCROLL ON MESSAGE ---
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -1212,6 +1230,17 @@ const DoctorChats = () => {
     );
   };
 
+  // If showing video call component, render it instead of the chat interface
+  if (showVideoCallComponent) {
+    return (
+      <NewVideocallComponent 
+        patient={currentChat}
+        doctor={DOCTOR_PROFILE}
+        onClose={handleCloseVideoCall}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Incoming Call Modal */}
@@ -1352,6 +1381,12 @@ const DoctorChats = () => {
                     className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Video className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={handleNewVideoCall}
+                    className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-md font-medium"
+                  >
+                    New Video Call
                   </button>
                   <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors">
                     <MoreVertical className="w-5 h-5" />

@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "agora-rtc-sdk-ng": "^4.24.0",
     "auth-tutorial": "file:..",
-    "axios": "^1.7.3",
+    "axios": "^1.12.2",
     "chart.js": "^4.4.9",
     "cors": "^2.8.5",
     "daisyui": "^5.0.35",
