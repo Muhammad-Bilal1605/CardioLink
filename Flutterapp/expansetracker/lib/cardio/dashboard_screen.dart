@@ -489,48 +489,102 @@ class _DashboardHomeContent extends StatelessWidget {
   }
 
   Widget _buildAppointmentCard() {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Color(0xFF3366FF).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFF3366FF),
-                  size: 24,
-                ),
+  Appointment? nextAppointment = AppointmentStore.getNextAppointment();
+
+  return Container(
+    padding: EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 15,
+          offset: Offset(0, 5),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Color(0xFF3366FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-              SizedBox(width: 10),
-              Text(
-                'Next Appointment',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2E3A59),
-                ),
+              child: Icon(
+                Icons.calendar_today,
+                color: Color(0xFF3366FF),
+                size: 24,
               ),
-            ],
-          ),
-          SizedBox(height: 15),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Next Appointment',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2E3A59),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 15),
+        
+        // Check if there's an appointment
+        if (nextAppointment == null)
+          // No appointment - show empty state
+          Container(
+            padding: EdgeInsets.all(30),
+            decoration: BoxDecoration(
+              color: Color(0xFFF5F9FF),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(
+                color: Color(0xFF3366FF).withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.event_busy,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'No upcoming appointments',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => AppointmentScreen()),
+                      );
+                    },
+                    child: Text(
+                      'Book Appointment',
+                      style: GoogleFonts.poppins(
+                        color: Color(0xFF3366FF),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          // Has appointment - show appointment details
           Container(
             padding: EdgeInsets.all(15),
             decoration: BoxDecoration(
@@ -541,65 +595,176 @@ class _DashboardHomeContent extends StatelessWidget {
                 width: 1,
               ),
             ),
-            child: InkWell(
-              onTap: () {
-                // Handle appointment tap
-              },
-              borderRadius: BorderRadius.circular(15),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Color(0xFF3366FF),
-                    backgroundImage: NetworkImage(
-                      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
+            child: Column(
+              children: [
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => AppointmentScreen()),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(15),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Color(0xFF3366FF),
+                        backgroundImage: NetworkImage(nextAppointment.doctorImage),
+                      ),
+                      SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nextAppointment.doctorName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2E3A59),
+                              ),
+                            ),
+                            Text(
+                              nextAppointment.doctorSpecialty,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 12,
+                                  color: Color(0xFF3366FF),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '${nextAppointment.date} • ${nextAppointment.time}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Color(0xFF3366FF),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Color(0xFF3366FF),
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 15),
+                Divider(height: 1, color: Colors.grey[300]),
+                SizedBox(height: 15),
+                
+                // Joining Code Section
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Color(0xFF3366FF).withOpacity(0.2),
+                      width: 1.5,
                     ),
                   ),
-                  SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dr. Sarah Wilson',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2E3A59),
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF3366FF).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        Text(
-                          'Cardiologist',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                        child: Icon(
+                          Icons.key,
+                          color: Color(0xFF3366FF),
+                          size: 20,
                         ),
-                        SizedBox(height: 5),
-                        Text(
-                          'Tomorrow, 10:30 AM',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Joining Code',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              nextAppointment.joiningCode,
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF3366FF),
+                                letterSpacing: 4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(
+                            ClipboardData(text: nextAppointment.joiningCode),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Code copied to clipboard!'),
+                                ],
+                              ),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              margin: EdgeInsets.all(10),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
                             color: Color(0xFF3366FF),
-                            fontWeight: FontWeight.w600,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.copy,
+                            color: Colors.white,
+                            size: 18,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: Color(0xFF3366FF),
-                    size: 18,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+
+
 
   Widget _buildRecentRecordsSection() {
     return Column(

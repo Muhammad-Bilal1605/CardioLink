@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { usePatient } from '../../context/PatientContext';
 
 const UploadVisits = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { getActivePatientId } = usePatient();
   const patientId = getActivePatientId();
+
+  // Check if coming from video call
+  const fromVideoCall = location.state?.fromVideoCall || false;
+  const videoCallChannel = location.state?.channelName || '';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,20 +34,59 @@ const UploadVisits = () => {
 
   const [formData, setFormData] = useState({
     patientId: patientId,
-    date: '',
-    type: '',
+    date: new Date().toISOString().split('T')[0], // Auto-fill with today's date
+    type: 'specialist', // Default to specialist for video consultations
     provider: '',
-    reason: '',
+    reason: fromVideoCall ? `Video consultation via channel: ${videoCallChannel}` : '',
     diagnosis: '',
     treatment: '',
     followUpDate: '',
-    status: 'scheduled',
+    status: 'completed', // Video calls are typically completed
     documents: [],
     images: [],
     associatedLabResults: [],
     associatedImaging: [],
     prescribedMedicines: []
   });
+
+  // Show notification if coming from video call
+  useEffect(() => {
+    if (fromVideoCall) {
+      // Show a nice notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #3b82f6;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+      `;
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">📞</span>
+          <div>
+            <div style="font-weight: bold;">Video Call Ended</div>
+            <div style="font-size: 14px; opacity: 0.9;">Please fill in visit details below</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 5000);
+    }
+  }, [fromVideoCall]);
 
   // Redirect to patient list if no patient is selected
   useEffect(() => {
@@ -202,7 +246,7 @@ const UploadVisits = () => {
       // Add optional fields if they exist
       if (formData.diagnosis) {
         formDataToSend.append('diagnosis', formData.diagnosis);
-        }
+      }
       if (formData.treatment) {
         formDataToSend.append('treatment', formData.treatment);
       }
@@ -248,14 +292,6 @@ const UploadVisits = () => {
         prescribedMedicines: formData.prescribedMedicines
       });
 
-      console.log('Prescribed medicines to send:', formData.prescribedMedicines);
-      console.log('Prescribed medicines count:', formData.prescribedMedicines.length);
-
-      // Log the actual FormData contents
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-      }
-
       const response = await axios.post('http://localhost:5000/api/visits', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -263,7 +299,28 @@ const UploadVisits = () => {
       });
 
       if (response.data.success) {
-        navigate('/patient-visits');
+        // Show success notification
+        const successNotif = document.createElement('div');
+        successNotif.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #10b981;
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          z-index: 10000;
+        `;
+        successNotif.textContent = '✅ Visit uploaded successfully!';
+        document.body.appendChild(successNotif);
+        
+        setTimeout(() => {
+          if (successNotif.parentNode) {
+            document.body.removeChild(successNotif);
+          }
+          navigate('/patient-visits');
+        }, 2000);
       }
     } catch (err) {
       console.error('Error submitting form:', err);
@@ -275,7 +332,16 @@ const UploadVisits = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Upload Visit Details</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">
+          {fromVideoCall ? '📞 Upload Video Consultation Details' : 'Upload Visit Details'}
+        </h1>
+        {fromVideoCall && (
+          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+            From Video Call
+          </span>
+        )}
+      </div>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -283,10 +349,17 @@ const UploadVisits = () => {
         </div>
       )}
 
+      {fromVideoCall && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-6">
+          <p className="font-medium">💡 Tip: Some fields have been pre-filled based on your video consultation.</p>
+          <p className="text-sm mt-1">Please review and add diagnosis, treatment, and any prescribed medications.</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Date</label>
+            <label className="block text-sm font-medium text-gray-700">Date *</label>
             <input
               type="date"
               name="date"
@@ -298,7 +371,7 @@ const UploadVisits = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Type</label>
+            <label className="block text-sm font-medium text-gray-700">Type *</label>
             <select
               name="type"
               value={formData.type}
@@ -315,19 +388,20 @@ const UploadVisits = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Provider</label>
+            <label className="block text-sm font-medium text-gray-700">Provider *</label>
             <input
               type="text"
               name="provider"
               value={formData.provider}
               onChange={handleChange}
               required
+              placeholder="Doctor name"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Status</label>
+            <label className="block text-sm font-medium text-gray-700">Status *</label>
             <select
               name="status"
               value={formData.status}
@@ -344,13 +418,14 @@ const UploadVisits = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Reason for Visit</label>
+          <label className="block text-sm font-medium text-gray-700">Reason for Visit *</label>
           <textarea
             name="reason"
             value={formData.reason}
             onChange={handleChange}
             required
             rows="3"
+            placeholder="Describe the reason for this visit"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
@@ -362,6 +437,7 @@ const UploadVisits = () => {
             value={formData.diagnosis}
             onChange={handleChange}
             rows="3"
+            placeholder="Enter diagnosis"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
@@ -373,6 +449,7 @@ const UploadVisits = () => {
             value={formData.treatment}
             onChange={handleChange}
             rows="3"
+            placeholder="Describe treatment plan"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
@@ -485,6 +562,7 @@ const UploadVisits = () => {
                   name="name"
                   value={currentMedication.name}
                   onChange={handleMedicationChange}
+                  placeholder="Enter medication name"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
@@ -496,6 +574,7 @@ const UploadVisits = () => {
                   name="dosage"
                   value={currentMedication.dosage}
                   onChange={handleMedicationChange}
+                  placeholder="e.g., 500mg"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
@@ -527,6 +606,7 @@ const UploadVisits = () => {
                   name="prescribedBy"
                   value={currentMedication.prescribedBy}
                   onChange={handleMedicationChange}
+                  placeholder="Doctor name"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
@@ -561,6 +641,7 @@ const UploadVisits = () => {
                 value={currentMedication.reason}
                 onChange={handleMedicationChange}
                 rows="2"
+                placeholder="Reason for prescription"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
@@ -587,7 +668,7 @@ const UploadVisits = () => {
                 <div className="mt-2">
                   <ul className="space-y-1">
                     {currentMedication.sideEffects.map((effect, index) => (
-                      <li key={index} className="flex items-center justify-between text-sm">
+                      <li key={index} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                         <span>{effect}</span>
                         <button
                           type="button"
@@ -610,6 +691,7 @@ const UploadVisits = () => {
                 value={currentMedication.notes}
                 onChange={handleMedicationChange}
                 rows="2"
+                placeholder="Additional notes"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
@@ -617,7 +699,8 @@ const UploadVisits = () => {
             <button
               type="button"
               onClick={addMedication}
-              className="w-full px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              disabled={!currentMedication.name || !currentMedication.dosage || !currentMedication.frequency}
+              className="w-full px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Add Medication
             </button>
@@ -626,18 +709,19 @@ const UploadVisits = () => {
           {/* List of added medications */}
           {medications.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-lg font-medium mb-2">Added Medications</h3>
+              <h3 className="text-lg font-medium mb-2">Added Medications ({medications.length})</h3>
               <div className="space-y-2">
                 {medications.map((med, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                    <div>
-                      <p className="font-medium">{med.name}</p>
+                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded border border-gray-200">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{med.name}</p>
                       <p className="text-sm text-gray-600">{med.dosage} - {med.frequency}</p>
+                      {med.reason && <p className="text-xs text-gray-500 mt-1">For: {med.reason}</p>}
                     </div>
                     <button
                       type="button"
                       onClick={() => removeMedication(index)}
-                      className="text-red-600 hover:text-red-800"
+                      className="ml-4 text-red-600 hover:text-red-800 font-medium"
                     >
                       Remove
                     </button>
@@ -648,19 +732,26 @@ const UploadVisits = () => {
           )}
         </div>
 
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end space-x-4 pt-6 border-t">
           <button
             type="button"
             onClick={() => navigate('/patient-visits')}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            disabled={loading}
+            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
+            {loading && (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
             {loading ? 'Uploading...' : 'Upload Visit'}
           </button>
         </div>
@@ -669,4 +760,4 @@ const UploadVisits = () => {
   );
 };
 
-export default UploadVisits; 
+export default UploadVisits;

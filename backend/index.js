@@ -1,3 +1,4 @@
+
 //Mern index.js  
 //c:\Users\PMLS\Desktop\CardioLink\CardioLink\backend\index.js
 import express from "express";
@@ -795,6 +796,7 @@ const loadModels = async () => {
     await import("./models/VitalSign.js");
     await import("./models/Procedure.js");
     await import("./models/Hospital.js");
+    await import("./models/Prescription.js"); // ADD THIS LINE
     console.log('Models loaded successfully');
     return true;
   } catch (error) {
@@ -816,6 +818,7 @@ const loadMedicalRoutes = async () => {
     const medicationRoutes = await import("./routes/medicationRoutes.js");
     const vitalSignRoutes = await import("./routes/vitalSignRoutes.js");
     const hospitalRoutes = await import("./routes/hospitalRoutes.js");
+    const prescriptionRoutes = await import("./routes/prescriptionRoutes.js"); // ADD THIS LINE
 
     app.use('/api/patients', patientRoutes.default);
     app.use('/api/imaging', imagingRoutes.default);
@@ -826,6 +829,7 @@ const loadMedicalRoutes = async () => {
     app.use('/api/medications', medicationRoutes.default);
     app.use('/api/vital-signs', vitalSignRoutes.default);
     app.use('/api/hospitals', hospitalRoutes.default);
+    app.use('/api/prescriptions', prescriptionRoutes.default); // ADD THIS LINE
     
     console.log('Medical routes loaded successfully');
     return true;
@@ -893,3 +897,6 @@ const startServer = async () => {
 
 // Start the server
 startServer();
+
+
+

@@ -1,3 +1,4 @@
+// appointment.dart
 class Appointment {
   final String id;
   final String doctorId;
@@ -7,7 +8,8 @@ class Appointment {
   final String date;
   final String time;
   final String location;
-  late final String status;
+  final String status;
+  final String joiningCode;
 
   Appointment({
     required this.id,
@@ -19,6 +21,7 @@ class Appointment {
     required this.time,
     required this.location,
     required this.status,
+    required this.joiningCode,
   });
 }
 

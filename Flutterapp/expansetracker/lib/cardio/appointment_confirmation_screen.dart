@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 import 'appointment.dart';
 import 'doctor.dart';
 import 'appointment_booked_screen.dart';
+import 'dart:math';
 
 class AppointmentConfirmationScreen extends StatefulWidget {
   final Doctor doctor;
   final DateTime date;
   final String time;
 
-  AppointmentConfirmationScreen({
+  const AppointmentConfirmationScreen({
+    Key? key,
     required this.doctor,
     required this.date,
     required this.time,
-  });
+  }) : super(key: key);
 
   @override
   _AppointmentConfirmationScreenState createState() => _AppointmentConfirmationScreenState();
@@ -22,12 +24,20 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
   String selectedPayment = 'Credit/Debit Card';
   final TextEditingController reasonController = TextEditingController();
 
+  // Helper function to generate a random joining code
+  String _generateJoiningCode() {
+  final random = Random();
+  // Generate a 4-digit number between 1000 and 9999
+  final code = 1000 + random.nextInt(9000);
+  return code.toString();
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text('Confirm Appointment'),
+        title: const Text('Confirm Appointment'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -36,7 +46,7 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -47,7 +57,7 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                     ),
                     elevation: 2,
                     child: Padding(
-                      padding: EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
                           Row(
@@ -63,14 +73,14 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                                   ),
                                 ),
                               ),
-                              SizedBox(width: 15),
+                              const SizedBox(width: 15),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       widget.doctor.name,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -81,19 +91,19 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                                         color: Colors.grey[600],
                                       ),
                                     ),
-                                    SizedBox(height: 4),
+                                    const SizedBox(height: 4),
                                     Row(
                                       children: [
-                                        Icon(Icons.star, size: 14, color: Colors.amber),
-                                        SizedBox(width: 4),
+                                        const Icon(Icons.star, size: 14, color: Colors.amber),
+                                        const SizedBox(width: 4),
                                         Text(
                                           widget.doctor.rating.toString(),
                                           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                                         ),
-                                        SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                         Text(
                                           '\$${widget.doctor.consultationFee}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.blue,
@@ -106,39 +116,39 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                               ),
                             ],
                           ),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Divider(height: 1, color: Colors.grey[200]),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 16, color: Colors.blue),
-                              SizedBox(width: 8),
+                              const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                              const SizedBox(width: 8),
                               Text(
                                 '${_getDayName(widget.date.weekday)}, ${widget.date.day} ${_getMonthName(widget.date.month)} ${widget.date.year}',
-                                style: TextStyle(fontSize: 14),
+                                style: const TextStyle(fontSize: 14),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(Icons.access_time, size: 16, color: Colors.blue),
-                              SizedBox(width: 8),
+                              const Icon(Icons.access_time, size: 16, color: Colors.blue),
+                              const SizedBox(width: 8),
                               Text(
                                 widget.time,
-                                style: TextStyle(fontSize: 14),
+                                style: const TextStyle(fontSize: 14),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(Icons.location_on, size: 16, color: Colors.blue),
-                              SizedBox(width: 8),
+                              const Icon(Icons.location_on, size: 16, color: Colors.blue),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'CardioLink Hospital, Room ${widget.doctor.roomNumber}',
-                                  style: TextStyle(fontSize: 14),
+                                  style: const TextStyle(fontSize: 14),
                                 ),
                               ),
                             ],
@@ -147,17 +157,17 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // Appointment Details Section
-                  Text(
+                  const Text(
                     'Appointment Details',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -167,13 +177,13 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                           color: Colors.grey.withOpacity(0.2),
                           spreadRadius: 2,
                           blurRadius: 5,
-                          offset: Offset(0, 3),
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
                     child: TextField(
                       controller: reasonController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Reason for visit (optional)',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(15),
@@ -181,21 +191,21 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                       maxLines: 3,
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // Payment Method Section
-                  Text(
+                  const Text(
                     'Payment Method',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   _buildPaymentMethod('Credit/Debit Card', Icons.credit_card),
                   _buildPaymentMethod('PayPal', Icons.payment),
                   _buildPaymentMethod('Insurance', Icons.health_and_safety),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // Cost Breakdown
                   Card(
@@ -204,38 +214,38 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                     ),
                     elevation: 2,
                     child: Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Cost Breakdown',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Consultation Fee'),
+                              const Text('Consultation Fee'),
                               Text('\$${widget.doctor.consultationFee}'),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Booking Fee'),
-                              Text('\$5'),
+                              const Text('Booking Fee'),
+                              const Text('\$5'),
                             ],
                           ),
-                          Divider(height: 20),
+                          const Divider(height: 20),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 'Total',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
@@ -244,7 +254,7 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                               ),
                               Text(
                                 '\$${widget.doctor.consultationFee + 5}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: Colors.blue,
@@ -263,7 +273,7 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
 
           // Bottom Confirmation Button - Pharmacy Style
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -271,7 +281,7 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                   color: Colors.grey.withOpacity(0.2),
                   spreadRadius: 2,
                   blurRadius: 5,
-                  offset: Offset(0, -3),
+                  offset: const Offset(0, -3),
                 ),
               ],
             ),
@@ -279,6 +289,9 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
+                  // Generate a joining code
+                  final joiningCode = _generateJoiningCode();
+                  
                   // Create appointment with proper format and all required data
                   final appointment = Appointment(
                     id: 'APT${DateTime.now().millisecondsSinceEpoch}',
@@ -288,8 +301,9 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                     doctorImage: widget.doctor.imageUrl,
                     date: '${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year}',
                     time: widget.time,
-                    location: 'Room ${widget.doctor.roomNumber}',
+                    location: 'CardioLink Hospital, Room ${widget.doctor.roomNumber}',
                     status: 'Upcoming',
+                    joiningCode: joiningCode, // Add the joining code here
                   );
 
                   // Add to AppointmentStore to ensure it shows regardless of navigation path
@@ -313,14 +327,14 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
-                  padding: EdgeInsets.symmetric(vertical: 15),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: Text(
                   'Confirm Appointment - \$${widget.doctor.consultationFee + 5}',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
             ),
@@ -340,23 +354,23 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
         });
       },
       child: Card(
-        margin: EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: isSelected
-              ? BorderSide(color: Colors.blue, width: 2)
+              ? const BorderSide(color: Colors.blue, width: 2)
               : BorderSide.none,
         ),
         elevation: isSelected ? 3 : 1,
         child: Padding(
-          padding: EdgeInsets.all(12),
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               Icon(icon,
                   size: 20,
                   color: isSelected ? Colors.blue : Colors.grey[600]
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 title,
                 style: TextStyle(
@@ -365,11 +379,11 @@ class _AppointmentConfirmationScreenState extends State<AppointmentConfirmationS
                   color: isSelected ? Colors.blue : Colors.black,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               if (isSelected)
-                Icon(Icons.check_circle, color: Colors.blue, size: 20)
+                const Icon(Icons.check_circle, color: Colors.blue, size: 20)
               else
-                Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
             ],
           ),
         ),

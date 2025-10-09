@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'date_time_selection_screen.dart';
 import 'doctor_selection_screen.dart';
 import 'appointment.dart';
@@ -6,7 +7,7 @@ import 'appointment.dart';
 class AppointmentScreen extends StatefulWidget {
   final Appointment? newAppointment;
   
-  AppointmentScreen({this.newAppointment});
+  const AppointmentScreen({Key? key, this.newAppointment}) : super(key: key);
 
   @override
   _AppointmentScreenState createState() => _AppointmentScreenState();
@@ -16,17 +17,22 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   @override
   void initState() {
     super.initState();
+    _addNewAppointmentIfValid();
+  }
+
+  void _addNewAppointmentIfValid() {
     if (widget.newAppointment != null) {
-      // Check if appointment already exists to avoid duplicates
+      final newAppointment = widget.newAppointment!;
       bool exists = AppointmentStore.upcomingAppointments.any((appointment) =>
-          appointment.doctorId == widget.newAppointment!.doctorId &&
-          appointment.date == widget.newAppointment!.date &&
-          appointment.time == widget.newAppointment!.time);
+          appointment.doctorId == newAppointment.doctorId &&
+          appointment.date == newAppointment.date &&
+          appointment.time == newAppointment.time);
       
       if (!exists) {
-        setState(() {
-          widget.newAppointment!.status = 'Upcoming';
-          AppointmentStore.upcomingAppointments.add(widget.newAppointment!);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            AppointmentStore.upcomingAppointments.add(newAppointment);
+          });
         });
       }
     }
@@ -37,13 +43,13 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text('Appointments'),
+        title: const Text('Appointments'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.add, color: Colors.blue),
+            icon: const Icon(Icons.add, color: Colors.blue),
             onPressed: () {
               Navigator.push(
                 context,
@@ -64,18 +70,18 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                 labelColor: Colors.blue,
                 unselectedLabelColor: Colors.grey[600],
                 tabs: [
-                  Tab(text: 'Upcoming (${AppointmentStore.upcomingAppointments.length})'), // Update to use AppointmentStore
-                  Tab(text: 'Completed (${AppointmentStore.completedAppointments.length})'), // Update to use AppointmentStore
-                  Tab(text: 'Cancelled (${AppointmentStore.cancelledAppointments.length})'), // Update to use AppointmentStore
+                  Tab(text: 'Upcoming (${AppointmentStore.upcomingAppointments.length})'),
+                  Tab(text: 'Completed (${AppointmentStore.completedAppointments.length})'),
+                  Tab(text: 'Cancelled (${AppointmentStore.cancelledAppointments.length})'),
                 ],
               ),
             ),
             Expanded(
               child: TabBarView(
                 children: [
-                  _buildAppointmentList(AppointmentStore.upcomingAppointments, 'Upcoming'), // Update to use AppointmentStore
-                  _buildAppointmentList(AppointmentStore.completedAppointments, 'Completed'), // Update to use AppointmentStore
-                  _buildAppointmentList(AppointmentStore.cancelledAppointments, 'Cancelled'), // Update to use AppointmentStore
+                  _buildAppointmentList(AppointmentStore.upcomingAppointments, 'Upcoming'),
+                  _buildAppointmentList(AppointmentStore.completedAppointments, 'Completed'),
+                  _buildAppointmentList(AppointmentStore.cancelledAppointments, 'Cancelled'),
                 ],
               ),
             ),
@@ -90,7 +96,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           );
         },
         backgroundColor: Colors.blue,
-        child: Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -102,7 +108,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.calendar_today_outlined, size: 60, color: Colors.grey),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'No $listType appointments found',
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
@@ -113,7 +119,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       itemCount: appointments.length,
       itemBuilder: (context, index) {
         final appointment = appointments[index];
@@ -123,29 +129,16 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   }
 
   Widget _buildAppointmentCard(Appointment appointment) {
-    Color statusColor;
-    switch (appointment.status) {
-      case 'Upcoming':
-        statusColor = Colors.blue;
-        break;
-      case 'Completed':
-        statusColor = Colors.green;
-        break;
-      case 'Cancelled':
-        statusColor = Colors.red;
-        break;
-      default:
-        statusColor = Colors.grey;
-    }
+    final statusColor = _getStatusColor(appointment.status);
 
     return Card(
-      margin: EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
       elevation: 2,
       child: Padding(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -162,14 +155,14 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 15),
+                const SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         appointment.doctorName,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -180,11 +173,11 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                           color: Colors.grey[600],
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Row(
                         children: [
                           Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
                             '${appointment.date} • ${appointment.time}',
                             style: TextStyle(color: Colors.grey[600], fontSize: 12),
@@ -195,7 +188,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -211,72 +204,211 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Text(
                   appointment.location,
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
+            // Show joining code for upcoming appointments
             if (appointment.status == 'Upcoming') ...[
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          appointment.status = 'Cancelled';
-                          AppointmentStore.cancelledAppointments.add(appointment); // Update to use AppointmentStore
-                          AppointmentStore.upcomingAppointments.remove(appointment); // Update to use AppointmentStore
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Appointment cancelled')),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      child: Text('Cancel', style: TextStyle(fontSize: 12)),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DoctorSelectionScreen(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      child: Text('Reschedule',
-                          style: TextStyle(fontSize: 12, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(height: 8),
+              _buildJoiningCodeSection(appointment),
+            ],
+            if (appointment.status == 'Upcoming') ...[
+              const SizedBox(height: 12),
+              _buildActionButtons(appointment),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildJoiningCodeSection(Appointment appointment) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.key, size: 16, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(
+                'Joining Code: ',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+              ),
+              Text(
+                appointment.joiningCode,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+          InkWell(
+            onTap: () => _copyJoiningCode(appointment.joiningCode),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.copy, size: 16, color: Colors.blue),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(Appointment appointment) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => _showCancelDialog(appointment),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+            child: const Text('Cancel', style: TextStyle(fontSize: 12)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DoctorSelectionScreen(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+            child: const Text('Reschedule',
+                style: TextStyle(fontSize: 12, color: Colors.white)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Upcoming':
+        return Colors.blue;
+      case 'Completed':
+        return Colors.green;
+      case 'Cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  void _copyJoiningCode(String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Code copied!'),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showCancelDialog(Appointment appointment) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              const SizedBox(width: 10),
+              const Text('Cancel Appointment', style: TextStyle(fontSize: 18)),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to cancel this appointment with ${appointment.doctorName}?',
+            style: const TextStyle(fontSize: 15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('No', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  AppointmentStore.upcomingAppointments.remove(appointment);
+                  AppointmentStore.cancelledAppointments.add(appointment);
+                });
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white),
+                        SizedBox(width: 10),
+                        Text('Appointment cancelled successfully'),
+                      ],
+                    ),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Yes, Cancel', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 }
