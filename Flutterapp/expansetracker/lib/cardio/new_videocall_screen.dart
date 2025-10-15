@@ -402,7 +402,7 @@ class _NewVideocallScreenState extends State<NewVideocallScreen> {
                     keyboardType: TextInputType.none, // Disable default keyboard
                     maxLength: 4,
                     readOnly: true, // Make it read-only to prevent default keyboard
-                    onTap: _toggleKeypad, // Show custom keypad when tapped
+                    //onTap: _toggleKeypad, // Show custom keypad when tapped
                     decoration: InputDecoration(
                       hintText: '----',
                       hintStyle: TextStyle(

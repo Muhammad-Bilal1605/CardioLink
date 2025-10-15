@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_webrtc
   iris_method_channel
   permission_handler_windows
+  printing
   url_launcher_windows
 )
 

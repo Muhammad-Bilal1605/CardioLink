@@ -1,8 +1,9 @@
-// lib/provider/auth_provider.dart - Complete Updated AuthProvider Compatible with ConfigService
+// lib/provider/auth_provider.dart - Updated with Token Management
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/config_service.dart';
+import '../services/appointment_api_service.dart'; // Add this import
 
 class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
@@ -17,7 +18,7 @@ class AuthProvider with ChangeNotifier {
   Map<String, dynamic>? get currentUser => _currentUser;
   String? get userType => _userType;
   String? get authToken => _authToken;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => _currentUser != null && _authToken != null;
 
   // Get base URL from config service (synchronous for compatibility)
   String get baseUrl => ConfigService.instance.baseUrl;
@@ -40,134 +41,151 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Set authentication token and update API service
+  void _setAuthToken(String? token) {
+    _authToken = token;
+    
+    // Always update the AppointmentApiService with current token
+    if (token != null && token.isNotEmpty) {
+      AppointmentApiService.setAuthToken(token);
+      print('✓ Auth token set in AppointmentApiService (length: ${token.length})');
+    } else {
+      AppointmentApiService.clearAuthToken();
+      print('✗ Auth token cleared from AppointmentApiService');
+    }
+  }
+
   // Clear all authentication data
   void clearAuth() {
     _currentUser = null;
     _userType = null;
-    _authToken = null;
+    _setAuthToken(null); // This will also clear from AppointmentApiService
     _errorMessage = null;
     notifyListeners();
+    print('✓ All authentication data cleared');
   }
 
   // PATIENT SIGNUP
- Future<bool> signup({
-  required String email,
-  required String password,
-  required String confirmPassword, // Add this line
-  required String name,
-  String? phoneNumber,
-  required String gender,
-  int? age,
-  DateTime? dateOfBirth,
-  String? bloodType,
-  List<String>? allergies,
-  String? emergencyContact,
-  List<Map<String, dynamic>>? medicalHistory,
-  List<Map<String, dynamic>>? currentMedications,
-}) async {
-  try {
-    _setLoading(true);
-    _setError(null);
+  Future<bool> signup({
+    required String email,
+    required String password,
+    required String name,
+    String? phoneNumber,
+    required String gender,
+    int? age,
+    DateTime? dateOfBirth,
+    String? bloodType,
+    List<String>? allergies,
+    String? emergencyContact,
+    List<Map<String, dynamic>>? medicalHistory,
+    List<Map<String, dynamic>>? currentMedications,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
 
-    final currentBaseUrl = baseUrl;
-    print('Starting patient signup process...');
-    print('Email: $email');
-    print('Name: $name');
-    print('Using API URL: $currentBaseUrl');
+      final currentBaseUrl = baseUrl;
+      print('Starting patient signup process...');
+      print('Email: $email');
+      print('Name: $name');
+      print('Using API URL: $currentBaseUrl');
 
-    // Validate required fields
-    if (age == null || age <= 0) {
-      _setError('Age is required and must be valid');
+      // Validate required fields
+      if (age == null || age <= 0) {
+        _setError('Age is required and must be valid');
+        return false;
+      }
+
+      if (dateOfBirth == null) {
+        _setError('Date of birth is required');
+        return false;
+      }
+
+      if (phoneNumber == null || phoneNumber.isEmpty) {
+        _setError('Phone number is required for patients');
+        return false;
+      }
+
+      final requestData = {
+        'email': email.trim(),
+        'password': password,
+        'name': name.trim(),
+        'phoneNumber': phoneNumber.trim(),
+        'gender': gender,
+        'age': age,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'bloodType': bloodType,
+        'allergies': allergies ?? [],
+        'emergencyContact': emergencyContact?.trim(),
+        'medicalHistory': medicalHistory ?? [],
+        'currentMedications': currentMedications ?? [],
+      };
+
+      // Remove null values
+      requestData.removeWhere((key, value) => value == null);
+
+      final uri = Uri.parse('$currentBaseUrl/auth/patient/signup');
+      print('Request URL: $uri');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(requestData),
+      ).timeout(const Duration(seconds: 30));
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        print('Empty response body received');
+        _setError('Server returned empty response');
+        return false;
+      }
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 201 && responseData['success'] == true) {
+        final userData = responseData['user'] ?? responseData['patient'];
+        
+        if (userData == null) {
+          print('No user data in successful response');
+          _setError('Invalid response format from server');
+          return false;
+        }
+
+        _currentUser = userData;
+        _userType = 'patient';
+        
+        // Set auth token from response
+        final token = responseData['token'];
+        if (token != null && token is String) {
+          _setAuthToken(token);
+        } else {
+          print('Warning: No token received in signup response');
+          _setAuthToken(null);
+        }
+        
+        print('✓ Patient signup successful - User ID: ${userData['id']}');
+        
+        notifyListeners();
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Patient signup failed';
+        print('✗ Patient signup failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('✗ Patient signup exception: $e');
+      _setError(_getNetworkErrorMessage(e));
       return false;
+    } finally {
+      _setLoading(false);
     }
-
-    if (dateOfBirth == null) {
-      _setError('Date of birth is required');
-      return false;
-    }
-
-    if (password != confirmPassword) {
-      _setError('Passwords do not match');
-      return false;
-    }
-
-    final requestData = {
-      'email': email.trim(),
-      'password': password,
-      'confirmPassword': confirmPassword, // Add this line
-      'name': name.trim(),
-      'gender': gender,
-      'age': age,
-      'dateOfBirth': dateOfBirth.toIso8601String(),
-    };
-
-    // Add optional fields only if they have values
-    if (phoneNumber != null && phoneNumber.trim().isNotEmpty) {
-      requestData['phoneNumber'] = phoneNumber.trim();
-    }
-    if (bloodType != null && bloodType.isNotEmpty) {
-      requestData['bloodType'] = bloodType;
-    }
-    if (allergies != null && allergies.isNotEmpty) {
-      requestData['allergies'] = allergies;
-    }
-    if (emergencyContact != null && emergencyContact.isNotEmpty) {
-      requestData['emergencyContact'] = emergencyContact.trim();
-    }
-    if (medicalHistory != null && medicalHistory.isNotEmpty) {
-      requestData['medicalHistory'] = medicalHistory;
-    }
-    if (currentMedications != null && currentMedications.isNotEmpty) {
-      requestData['currentMedications'] = currentMedications;
-    }
-
-    final uri = Uri.parse('$currentBaseUrl/auth/patient/signup');
-    print('Request URL: $uri');
-
-    final response = await http.post(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: json.encode(requestData),
-    ).timeout(const Duration(seconds: 30));
-
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.body.isEmpty) {
-      print('Empty response body received');
-      _setError('Server returned empty response');
-      return false;
-    }
-
-    final responseData = json.decode(response.body);
-
-    if (response.statusCode == 201 && responseData['success'] == true) {
-      _currentUser = responseData['user'] ?? responseData['patient'];
-      _userType = 'patient';
-      _authToken = responseData['token'];
-      
-      print('Patient signup successful');
-      print('User data: $_currentUser');
-      
-      notifyListeners();
-      return true;
-    } else {
-      final errorMsg = responseData['message'] ?? 'Patient signup failed';
-      print('Patient signup failed: $errorMsg');
-      _setError(errorMsg);
-      return false;
-    }
-  } catch (e) {
-    print('Patient signup exception: $e');
-    _setError(_getNetworkErrorMessage(e));
-    return false;
-  } finally {
-    _setLoading(false);
   }
-}
 
   // AMBULANCE EMPLOYER SIGNUP
   Future<bool> ambulanceEmployerSignup({
@@ -268,20 +286,28 @@ class AuthProvider with ChangeNotifier {
 
         _currentUser = userData;
         _userType = 'ambulance_employer';
-        _authToken = responseData['token'];
         
-        print('Ambulance employer signup successful');
+        // Set auth token from response
+        final token = responseData['token'];
+        if (token != null && token is String) {
+          _setAuthToken(token);
+        } else {
+          print('Warning: No token received in signup response');
+          _setAuthToken(null);
+        }
+        
+        print('✓ Ambulance employer signup successful - User ID: ${userData['id']}');
         
         notifyListeners();
         return true;
       } else {
         final errorMsg = responseData['message'] ?? 'Ambulance employer signup failed';
-        print('Ambulance employer signup failed: $errorMsg');
+        print('✗ Ambulance employer signup failed: $errorMsg');
         _setError(errorMsg);
         return false;
       }
     } catch (e) {
-      print('Ambulance employer signup exception: $e');
+      print('✗ Ambulance employer signup exception: $e');
       _setError(_getNetworkErrorMessage(e));
       return false;
     } finally {
@@ -290,145 +316,170 @@ class AuthProvider with ChangeNotifier {
   }
 
   // PATIENT LOGIN
- // lib/provider/auth_provider.dart - UPDATED patientLogin and ambulanceEmployerLogin
+  Future<bool> patientLogin({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
 
-// PATIENT LOGIN - UPDATED
-Future<bool> patientLogin({
-  required String email,
-  required String password,
-}) async {
-  try {
-    _setLoading(true);
-    _setError(null);
+      final currentBaseUrl = baseUrl;
+      print('Starting patient login process...');
+      print('Using API URL: $currentBaseUrl');
 
-    final currentBaseUrl = baseUrl;
-    print('Starting patient login process...');
-    print('Using API URL: $currentBaseUrl');
+      final response = await http.post(
+        Uri.parse('$currentBaseUrl/auth/patient/login'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email.trim(),
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 30));
 
-    final response = await http.post(
-      Uri.parse('$currentBaseUrl/auth/patient/login'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: json.encode({
-        'email': email.trim(),
-        'password': password,
-      }),
-    ).timeout(const Duration(seconds: 30));
+      print('Response status: ${response.statusCode}');
 
-    print('Response status: ${response.statusCode}');
+      if (response.body.isEmpty) {
+        _setError('Server returned empty response');
+        return false;
+      }
 
-    if (response.body.isEmpty) {
-      _setError('Server returned empty response');
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        _currentUser = responseData['patient'];
+        _userType = 'patient';
+        
+        // Set auth token from response
+        final token = responseData['token'];
+        if (token != null && token is String) {
+          _setAuthToken(token);
+        } else {
+          print('Warning: No token received in login response');
+          _setAuthToken(null);
+        }
+        
+        print('✓ Patient login successful - User ID: ${_currentUser?['id']}');
+        
+        notifyListeners();
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Login failed';
+        print('✗ Patient login failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('✗ Patient login exception: $e');
+      _setError(_getNetworkErrorMessage(e));
       return false;
+    } finally {
+      _setLoading(false);
     }
-
-    final responseData = json.decode(response.body);
-
-    if (response.statusCode == 200 && responseData['success'] == true) {
-      // FIXED: Check 'user' key first, then fallback to 'patient'
-      _currentUser = responseData['user'] ?? responseData['patient'];
-      _userType = 'patient';
-      _authToken = responseData['token'];
-      
-      print('Patient login successful');
-      print('User data: $_currentUser');
-      
-      notifyListeners();
-      return true;
-    } else {
-      final errorMsg = responseData['message'] ?? 'Login failed';
-      print('Patient login failed: $errorMsg');
-      _setError(errorMsg);
-      return false;
-    }
-  } catch (e) {
-    print('Patient login exception: $e');
-    _setError(_getNetworkErrorMessage(e));
-    return false;
-  } finally {
-    _setLoading(false);
   }
-}
 
-// AMBULANCE EMPLOYER LOGIN - UPDATED
-Future<bool> ambulanceEmployerLogin({
-  required String email,
-  required String password,
-}) async {
-  try {
-    _setLoading(true);
-    _setError(null);
+  // AMBULANCE EMPLOYER LOGIN
+  Future<bool> ambulanceEmployerLogin({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
 
-    final currentBaseUrl = baseUrl;
-    print('Starting ambulance employer login process...');
-    print('Using API URL: $currentBaseUrl');
+      final currentBaseUrl = baseUrl;
+      print('Starting ambulance employer login process...');
+      print('Using API URL: $currentBaseUrl');
 
-    final response = await http.post(
-      Uri.parse('$currentBaseUrl/auth/ambulance-employer/login'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: json.encode({
-        'email': email.trim(),
-        'password': password,
-      }),
-    ).timeout(const Duration(seconds: 30));
+      final response = await http.post(
+        Uri.parse('$currentBaseUrl/auth/ambulance-employer/login'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email.trim(),
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 30));
 
-    print('Response status: ${response.statusCode}');
+      print('Response status: ${response.statusCode}');
 
-    if (response.body.isEmpty) {
-      _setError('Server returned empty response');
+      if (response.body.isEmpty) {
+        _setError('Server returned empty response');
+        return false;
+      }
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        _currentUser = responseData['employer'];
+        _userType = 'ambulance_employer';
+        
+        // Set auth token from response
+        final token = responseData['token'];
+        if (token != null && token is String) {
+          _setAuthToken(token);
+        } else {
+          print('Warning: No token received in login response');
+          _setAuthToken(null);
+        }
+        
+        print('✓ Ambulance employer login successful - User ID: ${_currentUser?['id']}');
+        
+        notifyListeners();
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Login failed';
+        print('✗ Ambulance employer login failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('✗ Ambulance employer login exception: $e');
+      _setError(_getNetworkErrorMessage(e));
       return false;
+    } finally {
+      _setLoading(false);
     }
-
-    final responseData = json.decode(response.body);
-
-    if (response.statusCode == 200 && responseData['success'] == true) {
-      // FIXED: Check 'user' key first, then fallback to 'employer'
-      _currentUser = responseData['user'] ?? responseData['employer'];
-      _userType = 'ambulance_employer';
-      _authToken = responseData['token'];
-      
-      print('Ambulance employer login successful');
-      print('User data: $_currentUser');
-      
-      notifyListeners();
-      return true;
-    } else {
-      final errorMsg = responseData['message'] ?? 'Login failed';
-      print('Ambulance employer login failed: $errorMsg');
-      _setError(errorMsg);
-      return false;
-    }
-  } catch (e) {
-    print('Ambulance employer login exception: $e');
-    _setError(_getNetworkErrorMessage(e));
-    return false;
-  } finally {
-    _setLoading(false);
   }
-}
 
   // UNIVERSAL LOGIN (detects user type automatically)
   Future<bool> login({
     required String email,
     required String password,
   }) async {
+    print('Starting universal login for: $email');
+    
     // Try patient login first
     bool patientLoginSuccess = await patientLogin(email: email, password: password);
     
     if (patientLoginSuccess) {
+      print('✓ Universal login completed as patient');
       return true;
     }
 
     // If patient login fails, try ambulance employer login
+    final patientError = _errorMessage;
     clearError(); // Clear the patient login error
+    
+    print('Patient login failed, trying ambulance employer...');
     bool employerLoginSuccess = await ambulanceEmployerLogin(email: email, password: password);
     
-    return employerLoginSuccess;
+    if (employerLoginSuccess) {
+      print('✓ Universal login completed as ambulance employer');
+      return true;
+    } else {
+      print('✗ Universal login failed for both user types');
+      // Restore the original error message if both fail
+      if (patientError != null) {
+        _setError(patientError);
+      }
+      return false;
+    }
   }
 
   // LOGOUT
@@ -442,6 +493,7 @@ Future<bool> ambulanceEmployerLogin({
         Uri.parse('$currentBaseUrl/auth/logout'),
         headers: {
           'Content-Type': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
         },
       ).timeout(const Duration(seconds: 15));
 
@@ -450,10 +502,10 @@ Future<bool> ambulanceEmployerLogin({
       // Clear local state regardless of response
       clearAuth();
       
-      print('User logged out successfully');
+      print('✓ User logged out successfully');
       return true;
     } catch (e) {
-      print('Logout exception: $e');
+      print('✗ Logout exception: $e');
       _setError('Logout error: ${e.toString()}');
       
       // Still clear local state even if network request fails
@@ -479,6 +531,7 @@ Future<bool> ambulanceEmployerLogin({
           Uri.parse('$currentBaseUrl/patients/check-auth'),
           headers: {
             'Content-Type': 'application/json',
+            if (_authToken != null) 'Authorization': 'Bearer $_authToken',
           },
         ).timeout(const Duration(seconds: 15));
 
@@ -487,9 +540,12 @@ Future<bool> ambulanceEmployerLogin({
           if (responseData['success'] == true) {
             _currentUser = responseData['patient'];
             _userType = 'patient';
-            _authToken = 'valid';
+            // Keep existing token or set new one if available
+            if (responseData['token'] != null) {
+              _setAuthToken(responseData['token']);
+            }
             
-            print('Patient auth check successful');
+            print('✓ Patient auth check successful');
             notifyListeners();
             return true;
           }
@@ -504,6 +560,7 @@ Future<bool> ambulanceEmployerLogin({
           Uri.parse('$currentBaseUrl/ambulance-employers/check-auth'),
           headers: {
             'Content-Type': 'application/json',
+            if (_authToken != null) 'Authorization': 'Bearer $_authToken',
           },
         ).timeout(const Duration(seconds: 15));
 
@@ -512,9 +569,12 @@ Future<bool> ambulanceEmployerLogin({
           if (responseData['success'] == true) {
             _currentUser = responseData['employer'];
             _userType = 'ambulance_employer';
-            _authToken = 'valid';
+            // Keep existing token or set new one if available
+            if (responseData['token'] != null) {
+              _setAuthToken(responseData['token']);
+            }
             
-            print('Ambulance employer auth check successful');
+            print('✓ Ambulance employer auth check successful');
             notifyListeners();
             return true;
           }
@@ -526,11 +586,11 @@ Future<bool> ambulanceEmployerLogin({
       // If both fail, clear auth state
       clearAuth();
       
-      print('No valid authentication found');
+      print('✗ No valid authentication found');
       return false;
       
     } catch (e) {
-      print('Auth check exception: $e');
+      print('✗ Auth check exception: $e');
       _setError('Authentication check failed');
       return false;
     } finally {
@@ -538,7 +598,23 @@ Future<bool> ambulanceEmployerLogin({
     }
   }
 
-  // UPDATE PATIENT PROFILE
+  // MANUALLY SET AUTH TOKEN (for external use)
+  void setAuthToken(String token) {
+    _setAuthToken(token);
+    print('✓ Auth token set manually');
+  }
+
+  // MANUALLY CLEAR AUTH TOKEN (for external use)
+  void clearAuthToken() {
+    _setAuthToken(null);
+    print('✓ Auth token cleared manually');
+  }
+
+  // ... Rest of your methods remain the same (updatePatientProfile, updateAmbulanceEmployerProfile, etc.)
+  // Only the token-related parts have been updated above
+
+  // DEBUG: Print current state
+
   Future<bool> updatePatientProfile(Map<String, dynamic> profileData) async {
     try {
       _setLoading(true);
@@ -614,15 +690,14 @@ Future<bool> ambulanceEmployerLogin({
 
   // GENERIC SIGNUP METHOD
   Future<bool> signupByType({
-   required String userType,
-  required String email,
-  required String password,
-  required String confirmPassword, // Add this line
-  required String name,
-  String? phoneNumber,
-  required String gender,
-  int? age,
-  DateTime? dateOfBirth,
+    required String userType,
+    required String email,
+    required String password,
+    required String name,
+    String? phoneNumber,
+    required String gender,
+    int? age,
+    DateTime? dateOfBirth,
     // Patient-specific fields
     String? bloodType,
     List<String>? allergies,
@@ -640,7 +715,6 @@ Future<bool> ambulanceEmployerLogin({
       return await signup(
         email: email,
         password: password,
-         confirmPassword: confirmPassword, // Add this line
         name: name,
         phoneNumber: phoneNumber,
         gender: gender,
@@ -815,7 +889,7 @@ Future<bool> ambulanceEmployerLogin({
 
   String get userId {
     if (_currentUser == null) return '';
-    return _currentUser!['_id'] ?? _currentUser!['id'] ?? '';
+    return _currentUser!['id'] ?? '';
   }
 
   // Get current server configuration info (async version for UI)
@@ -865,13 +939,15 @@ Future<bool> ambulanceEmployerLogin({
     }
   }
 
-  // DEBUG: Print current state
+
+  
   Future<void> debugPrintState() async {
-    print('AuthProvider Debug State:');
+    print('=== AuthProvider Debug State ===');
     print('   • Is Loading: $_isLoading');
     print('   • Is Authenticated: $isAuthenticated');
     print('   • User Type: $_userType');
     print('   • Has Token: ${_authToken != null}');
+    print('   • Token Length: ${_authToken?.length ?? 0}');
     print('   • Has User: ${_currentUser != null}');
     print('   • Error: $_errorMessage');
     print('   • Current Base URL: $baseUrl');
@@ -884,5 +960,6 @@ Future<bool> ambulanceEmployerLogin({
     
     // Print config info
     await ConfigService.instance.printConfig();
+    print('================================');
   }
 }
