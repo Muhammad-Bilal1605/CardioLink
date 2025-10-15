@@ -4,6 +4,8 @@ import { User } from '../models/user.model.js';
 import Medication from '../models/Medication.js';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
+import cloudinary from '../config/cloudinary.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +40,24 @@ const upload = multer({
 
 // Middleware to handle file uploads
 export const uploadFiles = upload;
+
+// Helper: extract Cloudinary public_id from a secure URL
+const extractCloudinaryPublicId = (secureUrl) => {
+  try {
+    const uploadIndex = secureUrl.indexOf('/upload/');
+    if (uploadIndex === -1) return null;
+    let tail = secureUrl.substring(uploadIndex + '/upload/'.length);
+    if (tail.startsWith('v')) {
+      const firstSlash = tail.indexOf('/');
+      if (firstSlash !== -1) tail = tail.substring(firstSlash + 1);
+    }
+    const lastDot = tail.lastIndexOf('.');
+    if (lastDot !== -1) tail = tail.substring(0, lastDot);
+    return tail;
+  } catch (_) {
+    return null;
+  }
+};
 
 // Create new visit
 export const createVisit = async (req, res) => {
@@ -107,9 +127,43 @@ export const createVisit = async (req, res) => {
       });
     }
 
-    // Handle file uploads
-    const documents = req.files?.documents ? req.files.documents.map(file => file.path) : [];
-    const images = req.files?.images ? req.files.images.map(file => file.path) : [];
+    // Handle file uploads to Cloudinary
+    let documents = [];
+    let images = [];
+
+    if (req.files?.documents) {
+      const docUploads = await Promise.all(
+        req.files.documents.map(async (file) => {
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/visits/documents'
+            });
+            return result.secure_url;
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+        })
+      );
+      documents = docUploads.filter(Boolean);
+    }
+
+    if (req.files?.images) {
+      const imgUploads = await Promise.all(
+        req.files.images.map(async (file) => {
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/visits/images'
+            });
+            return result.secure_url;
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+        })
+      );
+      images = imgUploads.filter(Boolean);
+    }
 
     // Parse prescribedMedicines if it's a string (from FormData)
     let parsedPrescribedMedicines = [];
@@ -229,9 +283,43 @@ export const updateVisit = async (req, res) => {
       });
     }
 
-    // Handle file uploads
-    const documents = req.files?.documents ? req.files.documents.map(file => file.path) : visit.documents;
-    const images = req.files?.images ? req.files.images.map(file => file.path) : visit.images;
+    // Handle file uploads: upload new files to Cloudinary and append to existing arrays
+    let documents = visit.documents || [];
+    let images = visit.images || [];
+
+    if (req.files?.documents && req.files.documents.length > 0) {
+      const newDocUrls = await Promise.all(
+        req.files.documents.map(async (file) => {
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/visits/documents'
+            });
+            return result.secure_url;
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+        })
+      );
+      documents = [...documents, ...newDocUrls.filter(Boolean)];
+    }
+
+    if (req.files?.images && req.files.images.length > 0) {
+      const newImgUrls = await Promise.all(
+        req.files.images.map(async (file) => {
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/visits/images'
+            });
+            return result.secure_url;
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+        })
+      );
+      images = [...images, ...newImgUrls.filter(Boolean)];
+    }
 
     // Parse prescribedMedicines if it's a string (from FormData)
     let parsedPrescribedMedicines = visit.prescribedMedicines;
@@ -356,6 +444,23 @@ export const deleteVisit = async (req, res) => {
       for (const med of visit.prescribedMedicines) {
         if (med._id) {
           await Medication.findByIdAndDelete(med._id);
+        }
+      }
+    }
+
+    // Delete Cloudinary assets referenced by this visit
+    const urls = [
+      ...(visit.documents || []),
+      ...(visit.images || [])
+    ];
+    for (const url of urls) {
+      const publicId = extractCloudinaryPublicId(url || '');
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+        } catch (e1) {
+          try { await cloudinary.uploader.destroy(publicId, { resource_type: 'video' }); } catch (e2) {}
+          try { await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }); } catch (e3) {}
         }
       }
     }

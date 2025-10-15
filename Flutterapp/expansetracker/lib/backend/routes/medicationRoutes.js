@@ -7,7 +7,10 @@ import {
   deleteMedication
 } from '../controllers/medicationController.js';
 
+
 const router = express.Router();
+
+
 
 // Medication routes
 router.post('/', createMedication);

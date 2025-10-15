@@ -4,7 +4,8 @@ import {
   getPatientHospitalizations,
   getHospitalization,
   updateHospitalization,
-  deleteHospitalization
+  deleteHospitalization,
+  getHospitalHospitalizations
 } from '../controllers/hospitalizationController.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 
@@ -15,6 +16,7 @@ router.use(verifyToken);
 
 // Hospitalization routes
 router.post('/', createHospitalization);
+router.get('/hospital', getHospitalHospitalizations);
 router.get('/patient/:patientId', getPatientHospitalizations);
 router.get('/:id', getHospitalization);
 router.put('/:id', updateHospitalization);

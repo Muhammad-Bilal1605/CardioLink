@@ -31,7 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      final success = await authProvider.login(
+      // Try patient login first (since we're focusing on patients)
+      final success = await authProvider.patientLogin(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );

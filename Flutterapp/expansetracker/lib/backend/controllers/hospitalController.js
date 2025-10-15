@@ -6,6 +6,7 @@ import fs from 'fs';
 import bcryptjs from 'bcryptjs';
 import { User } from '../models/user.model.js';
 import { HospitalAdmin } from '../models/hospital-admin.model.js';
+import cloudinary from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,6 +81,24 @@ const upload = multer({
 // Middleware to handle file uploads
 export const uploadHospitalFiles = upload;
 
+// Helper: extract Cloudinary public_id from a secure URL
+const extractCloudinaryPublicId = (secureUrl) => {
+  try {
+    const uploadIndex = secureUrl.indexOf('/upload/');
+    if (uploadIndex === -1) return null;
+    let tail = secureUrl.substring(uploadIndex + '/upload/'.length);
+    if (tail.startsWith('v')) {
+      const firstSlash = tail.indexOf('/');
+      if (firstSlash !== -1) tail = tail.substring(firstSlash + 1);
+    }
+    const lastDot = tail.lastIndexOf('.');
+    if (lastDot !== -1) tail = tail.substring(0, lastDot);
+    return tail;
+  } catch (_) {
+    return null;
+  }
+};
+
 // Helper function to parse dot notation from FormData into nested objects
 const parseDotNotation = (obj) => {
   const result = {};
@@ -117,19 +136,30 @@ export const createHospital = async (req, res) => {
     // Parse dot notation from FormData into nested objects
     const hospitalData = parseDotNotation(req.body);
     
+    // Check if administrative contact email already exists in the User collection
+    if (hospitalData.administrativeContact && hospitalData.administrativeContact.emailAddress) {
+      const existingUser = await User.findOne({ email: hospitalData.administrativeContact.emailAddress });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this administrative contact email already exists. Please use a different email address.'
+        });
+      }
+    }
+    
     // Hash the administrative contact password if provided
     if (hospitalData.administrativeContact && hospitalData.administrativeContact.password) {
       console.log('Hashing administrative contact password...');
       hospitalData.administrativeContact.password = await bcryptjs.hash(hospitalData.administrativeContact.password, 10);
     }
     
-    // Handle uploaded files
+    // Handle uploaded files - upload to Cloudinary
     if (req.files) {
-      console.log('Processing uploaded files...');
+      console.log('Processing uploaded files to Cloudinary...');
       const documents = {};
       
       // Process each uploaded document
-      Object.keys(req.files).forEach(fieldName => {
+      for (const fieldName of Object.keys(req.files)) {
         const files = req.files[fieldName];
         console.log(`Processing field: ${fieldName}, files:`, files.map(f => ({ 
           filename: f.filename, 
@@ -140,17 +170,25 @@ export const createHospital = async (req, res) => {
         
         if (fieldName === 'accreditationCertificates') {
           // Handle multiple accreditation certificates
-          documents.accreditationCertificates = files.map(file => {
-            console.log('Saving accreditation certificate URL:', `/uploads/hospitals/${file.filename}`);
-            return {
-              type: req.body.accreditationType || 'Other',
-              url: `/uploads/hospitals/${file.filename}`,
-              certificateNumber: req.body.accreditationNumber || '',
-              issuedBy: req.body.accreditationIssuedBy || '',
-              expiryDate: req.body.accreditationExpiryDate || null,
-              uploadDate: new Date()
-            };
+          const uploadPromises = files.map(async (file) => {
+            try {
+              const result = await cloudinary.uploader.upload(file.path, {
+                resource_type: 'auto',
+                folder: 'cardiolink/hospitals/accreditations'
+              });
+              return {
+                type: req.body.accreditationType || 'Other',
+                url: result.secure_url,
+                certificateNumber: req.body.accreditationNumber || '',
+                issuedBy: req.body.accreditationIssuedBy || '',
+                expiryDate: req.body.accreditationExpiryDate || null,
+                uploadDate: new Date()
+              };
+            } finally {
+              try { fs.unlinkSync(file.path); } catch (_) {}
+            }
           });
+          documents.accreditationCertificates = await Promise.all(uploadPromises);
         } else if (fieldName === 'adminIdProof') {
           // Handle admin ID proof - ensure nested structure exists
           if (!hospitalData.administrativeContact) {
@@ -159,42 +197,48 @@ export const createHospital = async (req, res) => {
           if (!hospitalData.administrativeContact.idProof) {
             hospitalData.administrativeContact.idProof = {};
           }
-          const documentUrl = `/uploads/hospitals/${files[0].filename}`;
-          console.log('Saving admin ID proof URL:', documentUrl);
-          hospitalData.administrativeContact.idProof.documentUrl = documentUrl;
+          
+          const file = files[0];
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/hospitals/admin-proof'
+            });
+            hospitalData.administrativeContact.idProof.documentUrl = result.secure_url;
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
         } else {
           // Handle other single documents
           const file = files[0];
-          const documentUrl = `/uploads/hospitals/${file.filename}`;
-          console.log(`Saving ${fieldName} URL:`, documentUrl);
-          console.log('File path on disk:', file.path);
-          
-          // Verify file exists on disk
-          if (fs.existsSync(file.path)) {
-            console.log('✓ File exists on disk:', file.path);
-          } else {
-            console.error('✗ File NOT found on disk:', file.path);
-          }
-          
-          documents[fieldName] = {
-            url: documentUrl,
-            uploadDate: new Date()
-          };
-          
-          // Add additional fields based on document type
-          if (fieldName === 'healthDepartmentLicense') {
-            documents[fieldName].licenseNumber = req.body.healthLicenseNumber || '';
-            documents[fieldName].expiryDate = req.body.healthLicenseExpiryDate || null;
-          } else if (fieldName === 'proofOfOwnership') {
-            documents[fieldName].documentType = req.body.ownershipDocumentType || 'Other';
-          } else if (fieldName === 'ambulanceRegistration') {
-            documents[fieldName].registrationNumber = req.body.ambulanceRegNumber || '';
-            documents[fieldName].numberOfAmbulances = parseInt(req.body.numberOfAmbulances) || 0;
-          } else if (fieldName === 'taxRegistration') {
-            documents[fieldName].taxNumber = req.body.taxNumber || '';
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/hospitals/documents'
+            });
+            
+            documents[fieldName] = {
+              url: result.secure_url,
+              uploadDate: new Date()
+            };
+            
+            // Add additional fields based on document type
+            if (fieldName === 'healthDepartmentLicense') {
+              documents[fieldName].licenseNumber = req.body.healthLicenseNumber || '';
+              documents[fieldName].expiryDate = req.body.healthLicenseExpiryDate || null;
+            } else if (fieldName === 'proofOfOwnership') {
+              documents[fieldName].documentType = req.body.ownershipDocumentType || 'Other';
+            } else if (fieldName === 'ambulanceRegistration') {
+              documents[fieldName].registrationNumber = req.body.ambulanceRegNumber || '';
+              documents[fieldName].numberOfAmbulances = parseInt(req.body.numberOfAmbulances) || 0;
+            } else if (fieldName === 'taxRegistration') {
+              documents[fieldName].taxNumber = req.body.taxNumber || '';
+            }
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
           }
         }
-      });
+      }
       
       console.log('Final documents object:', JSON.stringify(documents, null, 2));
       hospitalData.documents = { ...hospitalData.documents, ...documents };
@@ -327,22 +371,33 @@ export const updateHospital = async (req, res) => {
       updateData.administrativeContact.password = await bcryptjs.hash(updateData.administrativeContact.password, 10);
     }
     
-    // Handle uploaded files if any
+    // Handle uploaded files if any - upload to Cloudinary
     if (req.files) {
       const documents = {};
       
-      Object.keys(req.files).forEach(fieldName => {
+      for (const fieldName of Object.keys(req.files)) {
         const files = req.files[fieldName];
         
         if (fieldName === 'accreditationCertificates') {
-          documents.accreditationCertificates = files.map(file => ({
-            type: req.body.accreditationType || 'Other',
-            url: `/uploads/hospitals/${file.filename}`,
-            certificateNumber: req.body.accreditationNumber || '',
-            issuedBy: req.body.accreditationIssuedBy || '',
-            expiryDate: req.body.accreditationExpiryDate || null,
-            uploadDate: new Date()
-          }));
+          const uploadPromises = files.map(async (file) => {
+            try {
+              const result = await cloudinary.uploader.upload(file.path, {
+                resource_type: 'auto',
+                folder: 'cardiolink/hospitals/accreditations'
+              });
+              return {
+                type: req.body.accreditationType || 'Other',
+                url: result.secure_url,
+                certificateNumber: req.body.accreditationNumber || '',
+                issuedBy: req.body.accreditationIssuedBy || '',
+                expiryDate: req.body.accreditationExpiryDate || null,
+                uploadDate: new Date()
+              };
+            } finally {
+              try { fs.unlinkSync(file.path); } catch (_) {}
+            }
+          });
+          documents.accreditationCertificates = await Promise.all(uploadPromises);
         } else if (fieldName === 'adminIdProof') {
           // Handle admin ID proof - ensure nested structure exists
           if (!updateData.administrativeContact) {
@@ -351,15 +406,33 @@ export const updateHospital = async (req, res) => {
           if (!updateData.administrativeContact.idProof) {
             updateData.administrativeContact.idProof = {};
           }
-          updateData.administrativeContact.idProof.documentUrl = `/uploads/hospitals/${files[0].filename}`;
+          
+          const file = files[0];
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/hospitals/admin-proof'
+            });
+            updateData.administrativeContact.idProof.documentUrl = result.secure_url;
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
         } else {
           const file = files[0];
-          documents[fieldName] = {
-            url: `/uploads/hospitals/${file.filename}`,
-            uploadDate: new Date()
-          };
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              resource_type: 'auto',
+              folder: 'cardiolink/hospitals/documents'
+            });
+            documents[fieldName] = {
+              url: result.secure_url,
+              uploadDate: new Date()
+            };
+          } finally {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
         }
-      });
+      }
       
       updateData.documents = { ...updateData.documents, ...documents };
     }
@@ -394,7 +467,7 @@ export const updateHospital = async (req, res) => {
 // Delete hospital
 export const deleteHospital = async (req, res) => {
   try {
-    const hospital = await Hospital.findByIdAndDelete(req.params.id);
+    const hospital = await Hospital.findById(req.params.id);
     
     if (!hospital) {
       return res.status(404).json({
@@ -402,6 +475,43 @@ export const deleteHospital = async (req, res) => {
         message: 'Hospital not found'
       });
     }
+
+    // Delete Cloudinary assets
+    const urls = [];
+    
+    // Collect document URLs
+    if (hospital.documents) {
+      Object.values(hospital.documents).forEach(doc => {
+        if (Array.isArray(doc)) {
+          // accreditationCertificates is an array
+          doc.forEach(cert => {
+            if (cert.url) urls.push(cert.url);
+          });
+        } else if (doc && doc.url) {
+          urls.push(doc.url);
+        }
+      });
+    }
+    
+    // Collect admin ID proof URL
+    if (hospital.administrativeContact?.idProof?.documentUrl) {
+      urls.push(hospital.administrativeContact.idProof.documentUrl);
+    }
+
+    // Delete all Cloudinary assets
+    for (const url of urls) {
+      const publicId = extractCloudinaryPublicId(url);
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+        } catch (e1) {
+          try { await cloudinary.uploader.destroy(publicId, { resource_type: 'video' }); } catch (e2) {}
+          try { await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }); } catch (e3) {}
+        }
+      }
+    }
+
+    await Hospital.findByIdAndDelete(req.params.id);
     
     res.json({
       success: true,

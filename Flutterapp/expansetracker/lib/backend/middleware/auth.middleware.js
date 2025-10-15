@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/user.model.js';
-import { Patient } from '../models/patient.model.js';
+import Patient from '../models/User.js';
 import { AmbulanceEmployer } from '../models/AmbulanceEmployer.js';
 import AppError from '../utils/appError.js';
 

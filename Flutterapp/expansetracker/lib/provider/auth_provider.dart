@@ -22,6 +22,20 @@ class AuthProvider with ChangeNotifier {
   // Get base URL from config service (synchronous for compatibility)
   String get baseUrl => ConfigService.instance.baseUrl;
 
+  // Get authorization headers
+  Map<String, String> get _authHeaders {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    if (_authToken != null && _authToken != 'patient_token' && _authToken != 'valid') {
+      headers['Authorization'] = 'Bearer $_authToken';
+    }
+    
+    return headers;
+  }
+
   // Set loading state
   void _setLoading(bool loading) {
     _isLoading = loading;
@@ -49,20 +63,25 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // PATIENT SIGNUP
+  // PATIENT SIGNUP - Using same API as web frontend
   Future<bool> signup({
     required String email,
     required String password,
-    required String name,
-    String? phoneNumber,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
     required String gender,
-    int? age,
-    DateTime? dateOfBirth,
-    String? bloodType,
-    List<String>? allergies,
-    String? emergencyContact,
-    List<Map<String, dynamic>>? medicalHistory,
-    List<Map<String, dynamic>>? currentMedications,
+    required DateTime dateOfBirth,
+    String? street,
+    String? city,
+    String? state,
+    String? zipCode,
+    String? country,
+    Map<String, dynamic>? allergies,
+    Map<String, dynamic>? insurance,
+    Map<String, dynamic>? emergencyContact,
+    Map<String, dynamic>? socialHistory,
+    Map<String, dynamic>? specialDirectives,
   }) async {
     try {
       _setLoading(true);
@@ -71,42 +90,26 @@ class AuthProvider with ChangeNotifier {
       final currentBaseUrl = baseUrl;
       print('Starting patient signup process...');
       print('Email: $email');
-      print('Name: $name');
+      print('Name: $firstName $lastName');
       print('Using API URL: $currentBaseUrl');
 
-      // Validate required fields
-      if (age == null || age <= 0) {
-        _setError('Age is required and must be valid');
-        return false;
-      }
-
-      if (dateOfBirth == null) {
-        _setError('Date of birth is required');
-        return false;
-      }
-
-      if (phoneNumber == null || phoneNumber.isEmpty) {
-        _setError('Phone number is required for patients');
-        return false;
-      }
-
-      final requestData = {
+      // Build request data matching the unified auth controller structure
+      final requestData = <String, dynamic>{
+        'name': '${firstName.trim()} ${lastName.trim()}',
         'email': email.trim(),
         'password': password,
-        'name': name.trim(),
         'phoneNumber': phoneNumber.trim(),
         'gender': gender,
-        'age': age,
+        'age': DateTime.now().year - dateOfBirth.year,
         'dateOfBirth': dateOfBirth.toIso8601String(),
-        'bloodType': bloodType,
-        'allergies': allergies ?? [],
-        'emergencyContact': emergencyContact?.trim(),
-        'medicalHistory': medicalHistory ?? [],
-        'currentMedications': currentMedications ?? [],
       };
 
-      // Remove null values
-      requestData.removeWhere((key, value) => value == null);
+      // Add required fields for unified auth controller
+      requestData['bloodType'] = 'Unknown'; // Default value
+      requestData['allergies'] = allergies ?? [];
+      requestData['emergencyContact'] = emergencyContact ?? {'phoneNumber': phoneNumber};
+      requestData['medicalHistory'] = [];
+      requestData['currentMedications'] = [];
 
       final uri = Uri.parse('$currentBaseUrl/auth/patient/signup');
       print('Request URL: $uri');
@@ -132,7 +135,7 @@ class AuthProvider with ChangeNotifier {
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 201 && responseData['success'] == true) {
-        final userData = responseData['user'] ?? responseData['patient'];
+        final userData = responseData['user'];
         
         if (userData == null) {
           print('No user data in successful response');
@@ -142,14 +145,14 @@ class AuthProvider with ChangeNotifier {
 
         _currentUser = userData;
         _userType = 'patient';
-        _authToken = responseData['token'];
+        _authToken = responseData['token'] ?? 'patient_token'; // Use token from response if available
         
         print('Patient signup successful');
         
         notifyListeners();
         return true;
       } else {
-        final errorMsg = responseData['message'] ?? 'Patient signup failed';
+        final errorMsg = responseData['error'] ?? responseData['message'] ?? 'Patient signup failed';
         print('Patient signup failed: $errorMsg');
         _setError(errorMsg);
         return false;
@@ -283,7 +286,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // PATIENT LOGIN
+  // PATIENT LOGIN - Using same API as web frontend
   Future<bool> patientLogin({
     required String email,
     required String password,
@@ -296,42 +299,40 @@ class AuthProvider with ChangeNotifier {
       print('Starting patient login process...');
       print('Using API URL: $currentBaseUrl');
 
+      // Use the proper patient login endpoint
+      final requestBody = {
+        'email': email.trim(),
+        'password': password,
+      };
+      
+      print('🔐 Login request body: ${json.encode(requestBody)}');
+      print('🔐 Login headers: $_authHeaders');
+      
       final response = await http.post(
         Uri.parse('$currentBaseUrl/auth/patient/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
-          'email': email.trim(),
-          'password': password,
-        }),
+        headers: _authHeaders,
+        body: json.encode(requestBody),
       ).timeout(const Duration(seconds: 30));
 
-      print('Response status: ${response.statusCode}');
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: ${response.body}');
 
-      if (response.body.isEmpty) {
-        _setError('Server returned empty response');
-        return false;
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          _currentUser = responseData['patient'];
+          _userType = 'patient';
+          _authToken = responseData['token'];
+        
+          print('Patient login successful');
+          
+          notifyListeners();
+          return true;
+        }
       }
 
-      final responseData = json.decode(response.body);
-
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        _currentUser = responseData['patient'];
-        _userType = 'patient';
-        _authToken = responseData['token'];
-        
-        print('Patient login successful');
-        
-        notifyListeners();
-        return true;
-      } else {
-        final errorMsg = responseData['message'] ?? 'Login failed';
-        print('Patient login failed: $errorMsg');
-        _setError(errorMsg);
-        return false;
-      }
+      _setError('Patient not found or invalid credentials');
+      return false;
     } catch (e) {
       print('Patient login exception: $e');
       _setError(_getNetworkErrorMessage(e));
@@ -356,10 +357,7 @@ class AuthProvider with ChangeNotifier {
 
       final response = await http.post(
         Uri.parse('$currentBaseUrl/auth/ambulance-employer/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: _authHeaders,
         body: json.encode({
           'email': email.trim(),
           'password': password,
@@ -464,9 +462,7 @@ class AuthProvider with ChangeNotifier {
       try {
         final patientResponse = await http.get(
           Uri.parse('$currentBaseUrl/patients/check-auth'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: _authHeaders,
         ).timeout(const Duration(seconds: 15));
 
         if (patientResponse.statusCode == 200) {
@@ -489,9 +485,7 @@ class AuthProvider with ChangeNotifier {
       try {
         final employerResponse = await http.get(
           Uri.parse('$currentBaseUrl/ambulance-employers/check-auth'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: _authHeaders,
         ).timeout(const Duration(seconds: 15));
 
         if (employerResponse.statusCode == 200) {
@@ -623,19 +617,36 @@ class AuthProvider with ChangeNotifier {
     print('Generic signup called for user type: $userType');
     
     if (userType.toLowerCase() == 'patient') {
+      // Parse name into first and last name
+      final nameParts = name.split(' ');
+      final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      
+      // Convert List<String> allergies to Map structure if needed
+      Map<String, dynamic>? allergiesData;
+      if (allergies != null && allergies.isNotEmpty) {
+        allergiesData = {
+          'medicinal': allergies.map((allergy) => {
+            'name': allergy,
+            'reaction': '',
+            'criticality': 'Medium',
+            'notes': ''
+          }).toList(),
+          'food': [],
+          'environmental': []
+        };
+      }
+
       return await signup(
         email: email,
         password: password,
-        name: name,
-        phoneNumber: phoneNumber,
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber ?? '',
         gender: gender,
-        age: age,
-        dateOfBirth: dateOfBirth,
-        bloodType: bloodType,
-        allergies: allergies,
-        emergencyContact: emergencyContact,
-        medicalHistory: medicalHistory,
-        currentMedications: currentMedications,
+        dateOfBirth: dateOfBirth!,
+        allergies: allergiesData,
+        emergencyContact: emergencyContact != null ? {'phoneNumber': emergencyContact} : null,
       );
     } else if (userType.toLowerCase() == 'ambulance employer') {
       return await ambulanceEmployerSignup(
@@ -705,9 +716,7 @@ class AuthProvider with ChangeNotifier {
 
       final response = await http.get(
         Uri.parse(endpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: _authHeaders,
       ).timeout(const Duration(seconds: 15));
 
       print('Profile response status: ${response.statusCode}');

@@ -8,7 +8,7 @@ import { Radiologist } from "../models/radiologist.model.js";
 import { LabTechnologist } from "../models/lab-technologist.model.js";
 import { HospitalFrontDesk } from "../models/hospital-front-desk.model.js";
 import Hospital from "../models/Hospital.js";
-import { Patient } from "../models/patient.model.js";
+import Patient  from "../models/User.js";
 import { User } from "../models/user.model.js";
 
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";

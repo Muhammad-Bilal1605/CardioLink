@@ -1014,9 +1014,18 @@ import messageRoutes from "./routes/message.routes.js";
 import ambulanceRequestRoutes from "./routes/ambulanceRequestRoutes.js";
 import { Message } from "./models/message.model.js";
 
+// Import medical routes for EHR
+import visitRoutes from "./routes/visitRoutes.js";
+import hospitalizationRoutes from "./routes/hospitalizationRoutes.js";
+import procedureRoutes from "./routes/procedureRoutes.js";
+import labResultRoutes from "./routes/labResultRoutes.js";
+import imagingRoutes from "./routes/imagingRoutes.js";
+import medicationRoutes from "./routes/medicationRoutes.js";
+import vitalSignRoutes from "./routes/vitalSignRoutes.js";
+
 // Import models for debug routes
 import { AmbulanceEmployer } from "./models/ambulanceEmployer.model.js";
-import { Patient } from "./models/patient.model.js";
+import Patient from "./models/User.js";
 
 dotenv.config();
 
@@ -1179,9 +1188,178 @@ console.log("📁 Setting up static file serving...");
 console.log("📁 Uploads directory path:", uploadsDir);
 console.log("📁 Hospitals directory path:", hospitalsDir);
 
-// Static file serving
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/Backend/uploads', express.static(path.join(__dirname, 'uploads')));
+// Add debugging middleware for file requests
+app.use('/uploads', (req, res, next) => {
+  console.log('=====================================');
+  console.log('File request received:', req.url);
+  console.log('Request method:', req.method);
+  console.log('Full request path:', req.path);
+  console.log('Request headers:', req.headers);
+  
+  const filePath = path.join(__dirname, 'uploads', req.url);
+  console.log('Looking for file at:', filePath);
+  
+  if (fs.existsSync(filePath)) {
+    console.log('✓ File exists at:', filePath);
+    const stats = fs.statSync(filePath);
+    console.log('File size:', stats.size, 'bytes');
+    console.log('File modified:', stats.mtime);
+  } else {
+    console.log('✗ File NOT found at:', filePath);
+    
+    const dirPath = path.dirname(filePath);
+    console.log('Checking directory:', dirPath);
+    
+    if (fs.existsSync(dirPath)) {
+      console.log('Directory exists, contents:');
+      try {
+        const contents = fs.readdirSync(dirPath);
+        contents.forEach(item => {
+          const itemPath = path.join(dirPath, item);
+          const stats = fs.statSync(itemPath);
+          console.log(`  ${stats.isDirectory() ? '[DIR]' : '[FILE]'} ${item} (${stats.size} bytes)`);
+        });
+      } catch (err) {
+        console.log('Error reading directory:', err.message);
+      }
+    } else {
+      console.log('Directory does not exist');
+    }
+  }
+  console.log('=====================================');
+  next();
+});
+
+app.use('/Backend/uploads', (req, res, next) => {
+  console.log('=====================================');
+  console.log('Backend file request received:', req.url);
+  console.log('Request method:', req.method);
+  console.log('Full request path:', req.path);
+  console.log('Request headers:', req.headers);
+  
+  const filePath = path.join(__dirname, 'uploads', req.url);
+  console.log('Looking for file at:', filePath);
+  
+  if (fs.existsSync(filePath)) {
+    console.log('✓ File exists at:', filePath);
+    const stats = fs.statSync(filePath);
+    console.log('File size:', stats.size, 'bytes');
+    console.log('File modified:', stats.mtime);
+  } else {
+    console.log('✗ File NOT found at:', filePath);
+    
+    const dirPath = path.dirname(filePath);
+    console.log('Checking directory:', dirPath);
+    
+    if (fs.existsSync(dirPath)) {
+      console.log('Directory exists, contents:');
+      try {
+        const contents = fs.readdirSync(dirPath);
+        contents.forEach(item => {
+          const itemPath = path.join(dirPath, item);
+          const stats = fs.statSync(itemPath);
+          console.log(`  ${stats.isDirectory() ? '[DIR]' : '[FILE]'} ${item} (${stats.size} bytes)`);
+        });
+      } catch (err) {
+        console.log('Error reading directory:', err.message);
+      }
+    } else {
+      console.log('Directory does not exist');
+    }
+  }
+  console.log('=====================================');
+  next();
+});
+
+// Static file serving - Serve from both local uploads and main CardioLink uploads
+const mainUploadsDir = path.join(__dirname, '../../../uploads'); // Main CardioLink uploads directory
+
+// Serve from local uploads first, then fallback to main uploads
+app.use('/uploads', (req, res, next) => {
+  const localPath = path.join(__dirname, 'uploads', req.url);
+  const mainPath = path.join(mainUploadsDir, req.url);
+  
+  if (fs.existsSync(localPath)) {
+    console.log('✓ Serving from local uploads:', localPath);
+    return express.static(path.join(__dirname, 'uploads'))(req, res, next);
+  } else if (fs.existsSync(mainPath)) {
+    console.log('✓ Serving from main uploads:', mainPath);
+    return express.static(mainUploadsDir)(req, res, next);
+  } else {
+    console.log('✗ File not found in either location:', req.url);
+    return next();
+  }
+});
+
+app.use('/Backend/uploads', (req, res, next) => {
+  const localPath = path.join(__dirname, 'uploads', req.url);
+  const mainPath = path.join(mainUploadsDir, req.url);
+  
+  if (fs.existsSync(localPath)) {
+    console.log('✓ Serving from local uploads:', localPath);
+    return express.static(path.join(__dirname, 'uploads'))(req, res, next);
+  } else if (fs.existsSync(mainPath)) {
+    console.log('✓ Serving from main uploads:', mainPath);
+    return express.static(mainUploadsDir)(req, res, next);
+  } else {
+    console.log('✗ File not found in either location:', req.url);
+    return next();
+  }
+});
+
+// Direct file serving route for specific files
+app.get('/Backend/uploads/:filename', (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.filename);
+    console.log('Direct file request for:', filename);
+    
+    const localPath = path.join(__dirname, 'uploads', filename);
+    const mainPath = path.join(mainUploadsDir, filename);
+    
+    let filePath;
+    if (fs.existsSync(localPath)) {
+      filePath = localPath;
+      console.log('✓ Serving from local uploads:', filePath);
+    } else if (fs.existsSync(mainPath)) {
+      filePath = mainPath;
+      console.log('✓ Serving from main uploads:', filePath);
+    } else {
+      console.log('✗ File not found:', filename);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'File not found',
+        filename: filename,
+        localPath: localPath,
+        mainPath: mainPath
+      });
+    }
+    
+    // Set appropriate headers
+    const ext = path.extname(filename).toLowerCase();
+    const contentType = {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc': 'application/msword'
+    }[ext] || 'application/octet-stream';
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    
+    // Send the file
+    res.sendFile(filePath);
+    
+  } catch (error) {
+    console.error('Error serving file:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error serving file',
+      error: error.message 
+    });
+  }
+});
 
 // API Routes - Updated with new ambulance employer routes
 app.use("/api/auth", unifiedAuthRoutes); // New unified auth routes for both user types
@@ -1236,6 +1414,15 @@ app.use("/api/ambulance-requests", ambulanceRequestRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/messages", messageRoutes);
+
+// Medical routes for EHR overview
+app.use("/api/visits", visitRoutes);
+app.use("/api/hospitalizations", hospitalizationRoutes);
+app.use("/api/procedures", procedureRoutes);
+app.use("/api/lab-results", labResultRoutes);
+app.use("/api/imaging", imagingRoutes);
+app.use("/api/medications", medicationRoutes);
+app.use("/api/vital-signs", vitalSignRoutes);
 
 // ===== DEBUG ROUTES =====
 
@@ -1377,6 +1564,15 @@ app.get('/api/health', (req, res) => {
       // Check auth endpoints
       patientCheckAuth: '/api/patients/check-auth',
       ambulanceEmployerCheckAuth: '/api/ambulance-employers/check-auth',
+      
+      // Medical EHR endpoints
+      visits: '/api/visits',
+      hospitalizations: '/api/hospitalizations',
+      procedures: '/api/procedures',
+      labResults: '/api/lab-results',
+      imaging: '/api/imaging',
+      medications: '/api/medications',
+      vitalSigns: '/api/vital-signs',
       
       // Debug endpoints
       testAmbulanceEmployer: '/api/debug/test-ambulance-employer',
@@ -1849,6 +2045,14 @@ async function startServer() {
       console.log(`   • Test Ambulance Employer:  POST /api/debug/test-ambulance-employer`);
       console.log(`   • Collections Info:         GET /api/debug/collections-info`);
       console.log(`   • Test Flutter Signup:      POST /api/debug/test-flutter-signup`);
+      console.log(`\n🏥 Medical EHR Endpoints:`);
+      console.log(`   • Visits:           /api/visits/*`);
+      console.log(`   • Hospitalizations: /api/hospitalizations/*`);
+      console.log(`   • Procedures:       /api/procedures/*`);
+      console.log(`   • Lab Results:      /api/lab-results/*`);
+      console.log(`   • Imaging:          /api/imaging/*`);
+      console.log(`   • Medications:      /api/medications/*`);
+      console.log(`   • Vital Signs:      /api/vital-signs/*`);
       console.log(`\n🏥 Legacy Endpoints (still supported):`);
       console.log(`   • Patient:  /api/patient/*`);
       console.log(`   • Doctors:  /api/doctors/*`);
@@ -1894,3 +2098,4 @@ async function startServer() {
 }
 
 startServer();
+//

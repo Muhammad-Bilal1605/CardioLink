@@ -7,7 +7,9 @@ import {
   deleteVitalSign
 } from '../controllers/vitalSignController.js';
 
+
 const router = express.Router();
+
 
 // Vital sign routes
 router.post('/', createVitalSign);

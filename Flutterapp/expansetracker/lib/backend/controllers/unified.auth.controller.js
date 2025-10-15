@@ -1,7 +1,7 @@
 // unified.auth.controller.js
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Patient } from "../models/patient.model.js";
+import Patient  from "../models/User.js";
 import { AmbulanceEmployer } from "../models/ambulanceEmployer.model.js";
 
 // Generate JWT token for patients
@@ -111,11 +111,17 @@ export const patientSignup = async (req, res) => {
     // Hash password
     const hashedPassword = await bcryptjs.hash(password, 12);
 
+    // Split name into firstName and lastName
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
     // Create new patient
     const newPatient = new Patient({
       email,
       password: hashedPassword,
-      name,
+      firstName,
+      lastName,
       phoneNumber,
       gender,
       age,
@@ -144,7 +150,9 @@ export const patientSignup = async (req, res) => {
       token: token,
       user: {
         id: newPatient._id,
-        name: newPatient.name,
+        name: `${newPatient.firstName} ${newPatient.lastName}`.trim(),
+        firstName: newPatient.firstName,
+        lastName: newPatient.lastName,
         email: newPatient.email,
         phoneNumber: newPatient.phoneNumber,
         gender: newPatient.gender,
@@ -314,9 +322,11 @@ export const patientLogin = async (req, res) => {
     const { email, password } = req.body;
 
     console.log("🔐 Patient login attempt for:", email);
+    console.log("📝 Request body:", req.body);
 
     // Validation
     if (!email || !password) {
+      console.log("❌ Missing email or password");
       return res.status(400).json({
         success: false,
         message: "Email and password are required"
@@ -324,25 +334,35 @@ export const patientLogin = async (req, res) => {
     }
 
     // Check if patient exists
+    console.log("🔍 Searching for patient with email:", email);
     const patient = await Patient.findOne({ email });
+    console.log("🔍 Patient found:", patient ? "Yes" : "No");
+    if (patient) {
+      console.log("🔍 Patient ID:", patient._id);
+      console.log("🔍 Patient email:", patient.email);
+    }
     if (!patient) {
+      console.log("❌ Patient not found for email:", email);
       return res.status(400).json({
         success: false,
         message: "Invalid credentials"
       });
     }
 
-    // Check if account is active
-    if (!patient.isActive) {
+    // Check if account is verified (optional check)
+    if (patient.isVerified === false) {
       return res.status(400).json({
         success: false,
-        message: "Account has been deactivated. Please contact support."
+        message: "Account not verified. Please contact support."
       });
     }
 
     // Validate password
+    console.log("🔐 Validating password...");
     const isPasswordValid = await bcryptjs.compare(password, patient.password);
+    console.log("🔐 Password valid:", isPasswordValid);
     if (!isPasswordValid) {
+      console.log("❌ Invalid password for patient:", patient._id);
       return res.status(400).json({
         success: false,
         message: "Invalid credentials"
@@ -366,7 +386,9 @@ export const patientLogin = async (req, res) => {
       token: token,
       patient: {
         id: patient._id,
-        name: patient.name,
+        name: `${patient.firstName} ${patient.lastName}`.trim(),
+        firstName: patient.firstName,
+        lastName: patient.lastName,
         email: patient.email,
         phoneNumber: patient.phoneNumber,
         gender: patient.gender,
