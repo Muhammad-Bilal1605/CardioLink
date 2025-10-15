@@ -1014,6 +1014,7 @@ import messageRoutes from "./routes/message.routes.js";
 import ambulanceRequestRoutes from "./routes/ambulanceRequestRoutes.js";
 import { Message } from "./models/message.model.js";
 
+
 // Import models for debug routes
 import { AmbulanceEmployer } from "./models/ambulanceEmployer.model.js";
 import { Patient } from "./models/patient.model.js";
@@ -1123,6 +1124,7 @@ app.use(cors({
   credentials: true,
   optionsSuccessStatus: 200
 }));
+
 
 // Socket.IO Configuration with WebRTC Support
 const io = new Server(server, {
@@ -1236,7 +1238,7 @@ app.use("/api/ambulance-requests", ambulanceRequestRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/messages", messageRoutes);
-
+app.use('/api/appointments', appointmentRoutes);
 // ===== DEBUG ROUTES =====
 
 // Test ambulance employer creation directly
