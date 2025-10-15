@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _rememberMe = false;
+  String _selectedRole = 'Patient'; // Default role selection
   
   // Animation controllers for image animation
   late AnimationController _animationController;
@@ -69,11 +70,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      // Try patient login first (since we're focusing on patients)
-      final success = await authProvider.patientLogin(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      // Login based on selected role
+      bool success = false;
+      if (_selectedRole == 'Patient') {
+        success = await authProvider.patientLogin(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      } else {
+        success = await authProvider.ambulanceEmployerLogin(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      }
 
       if (success && mounted) {
         Navigator.pushReplacement(
@@ -241,6 +250,144 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Role Selection
+                              Text(
+                                'Login As',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedRole = 'Patient';
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        decoration: BoxDecoration(
+                                          color: _selectedRole == 'Patient'
+                                              ? const Color(0xFF4CAF50)
+                                              : Colors.white.withOpacity(0.8),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: _selectedRole == 'Patient'
+                                                ? const Color(0xFF4CAF50)
+                                                : Colors.grey[300]!,
+                                            width: 2,
+                                          ),
+                                          boxShadow: _selectedRole == 'Patient'
+                                              ? [
+                                                  BoxShadow(
+                                                    color: const Color(0xFF4CAF50).withOpacity(0.3),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                              : [],
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              Icons.person_outline,
+                                              color: _selectedRole == 'Patient'
+                                                  ? Colors.white
+                                                  : Colors.grey[700],
+                                              size: 32,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Patient',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: _selectedRole == 'Patient'
+                                                    ? Colors.white
+                                                    : Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedRole = 'Ambulance Personnel';
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        decoration: BoxDecoration(
+                                          color: _selectedRole == 'Ambulance Personnel'
+                                              ? const Color(0xFF4CAF50)
+                                              : Colors.white.withOpacity(0.8),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: _selectedRole == 'Ambulance Personnel'
+                                                ? const Color(0xFF4CAF50)
+                                                : Colors.grey[300]!,
+                                            width: 2,
+                                          ),
+                                          boxShadow: _selectedRole == 'Ambulance Personnel'
+                                              ? [
+                                                  BoxShadow(
+                                                    color: const Color(0xFF4CAF50).withOpacity(0.3),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                              : [],
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              Icons.local_hospital_outlined,
+                                              color: _selectedRole == 'Ambulance Personnel'
+                                                  ? Colors.white
+                                                  : Colors.grey[700],
+                                              size: 32,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Ambulance',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: _selectedRole == 'Ambulance Personnel'
+                                                    ? Colors.white
+                                                    : Colors.grey[700],
+                                              ),
+                                            ),
+                                            Text(
+                                              'Personnel',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: _selectedRole == 'Ambulance Personnel'
+                                                    ? Colors.white.withOpacity(0.9)
+                                                    : Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 24),
+
                               // Email Field
                               Text(
                                 'Email',

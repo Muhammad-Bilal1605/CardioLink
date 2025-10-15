@@ -12,7 +12,7 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   // Basic Info Controllers
   final _firstNameController = TextEditingController();
@@ -58,6 +58,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final _allergyReactionController = TextEditingController();
   final _allergyNotesController = TextEditingController();
 
+  // Ambulance Employer Controllers
+  final _companyNameController = TextEditingController();
+  final _licenseNumberController = TextEditingController();
+  final _serviceAreaController = TextEditingController();
+
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _agreeToTerms = false;
@@ -85,9 +90,43 @@ class _SignupScreenState extends State<SignupScreen> {
 
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
   final List<String> _userTypeOptions = ['Patient', 'Ambulance Employer'];
+  
+  // Expandable sections for optional fields
+  bool _showAddressSection = false;
+  bool _showAllergySection = false;
+  bool _showInsuranceSection = false;
+  bool _showEmergencyContactSection = false;
+  bool _showSocialHistorySection = false;
+  bool _showSpecialDirectivesSection = false;
+  bool _showAmbulanceDetailsSection = false;
+  
+  // Animation controller for page
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..forward();
+
+    // Scale animation
+    _scaleAnimation = Tween<double>(
+      begin: 1.1,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
 
   @override
   void dispose() {
+    _animationController.dispose();
     // Basic Info Controllers
     _firstNameController.dispose();
     _lastNameController.dispose();
@@ -131,6 +170,11 @@ class _SignupScreenState extends State<SignupScreen> {
     _allergyNameController.dispose();
     _allergyReactionController.dispose();
     _allergyNotesController.dispose();
+    
+    // Ambulance Employer Controllers
+    _companyNameController.dispose();
+    _licenseNumberController.dispose();
+    _serviceAreaController.dispose();
     
     super.dispose();
   }
@@ -297,9 +341,15 @@ class _SignupScreenState extends State<SignupScreen> {
           gender: _selectedGender,
           age: age,
           dateOfBirth: dateOfBirth,
-          companyName: null, // Simplified for now
-          licenseNumber: null, // Simplified for now
-          serviceArea: null, // Simplified for now
+          companyName: _companyNameController.text.trim().isNotEmpty 
+              ? _companyNameController.text.trim() 
+              : null,
+          licenseNumber: _licenseNumberController.text.trim().isNotEmpty 
+              ? _licenseNumberController.text.trim() 
+              : null,
+          serviceArea: _serviceAreaController.text.trim().isNotEmpty 
+              ? _serviceAreaController.text.trim() 
+              : null,
           emergencyContact: _emergencyPhoneController.text.trim().isNotEmpty
               ? _emergencyPhoneController.text.trim()
               : null,
@@ -323,6 +373,39 @@ class _SignupScreenState extends State<SignupScreen> {
         'An error occurred during signup: ${e.toString()}',
         Colors.red,
       );
+    }
+  }
+
+  Future<void> _selectDateOfBirth() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)), // Default to 25 years ago
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF6B8E3D), // Header background color
+              onPrimary: Colors.white, // Header text color
+              onSurface: Color(0xFF2D3748), // Body text color
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6B8E3D), // Button text color
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        // Format date as YYYY-MM-DD for backend compatibility
+        _dateOfBirthController.text = picked.toIso8601String().split('T')[0];
+      });
     }
   }
 
@@ -545,6 +628,100 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  Widget _buildExpandableSection({
+    required String title,
+    required String subtitle,
+    required bool isExpanded,
+    required VoidCallback onToggle,
+    required List<Widget> children,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isExpanded 
+              ? const Color(0xFF4CAF50).withOpacity(0.5) 
+              : Colors.grey[200]!,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4CAF50).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      isExpanded ? Icons.remove : Icons.add,
+                      color: const Color(0xFF4CAF50),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
@@ -556,6 +733,8 @@ class _SignupScreenState extends State<SignupScreen> {
     String? Function(String?)? validator,
     int maxLines = 1,
     String? helperText,
+    VoidCallback? onTap,
+    bool readOnly = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -574,37 +753,74 @@ class _SignupScreenState extends State<SignupScreen> {
         keyboardType: keyboardType,
         obscureText: obscureText,
         maxLines: maxLines,
+        readOnly: readOnly || onTap != null,
+        onTap: onTap,
+        style: GoogleFonts.poppins(
+          fontSize: 15,
+        ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: GoogleFonts.inter(
-            color: const Color(0xFF718096),
+          labelStyle: GoogleFonts.poppins(
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w500,
           ),
           helperText: helperText,
-          helperStyle: GoogleFonts.inter(
-            color: const Color(0xFF718096),
+          helperStyle: GoogleFonts.poppins(
+            color: Colors.grey[600],
             fontSize: 12,
           ),
           prefixIcon: Icon(
             icon,
-            color: const Color(0xFF6B8E3D),
+            color: const Color(0xFF4CAF50),
+            size: 22,
           ),
           suffixIcon: isPassword
               ? IconButton(
             icon: Icon(
-              obscureText ? Icons.visibility : Icons.visibility_off,
-              color: const Color(0xFF718096),
+              obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: Colors.grey[600],
+              size: 22,
             ),
             onPressed: toggleVisibility,
           )
               : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Colors.grey[200]!,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFF4CAF50),
+              width: 2,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Colors.red,
+            ),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Colors.red,
+              width: 2,
+            ),
+          ),
           filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.all(20),
-          errorStyle: GoogleFonts.inter(
+          fillColor: Colors.white.withOpacity(0.9),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          errorStyle: GoogleFonts.poppins(
             color: Colors.red,
             fontSize: 12,
           ),
@@ -617,30 +833,49 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF5),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            color: Color(0xFF6B8E3D),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Create Account',
-          style: GoogleFonts.inter(
-            color: const Color(0xFF2D3748),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Consumer<AuthProvider>(
+        child: Stack(
+          children: [
+            // Animated Image Background
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage('assets/images/loginpage.png'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Gradient overlay
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withOpacity(0.85),
+                      Colors.white.withOpacity(0.92),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Main content
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               if (authProvider.errorMessage != null) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -655,61 +890,61 @@ class _SignupScreenState extends State<SignupScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SizedBox(height: 20),
+                  
                   // Header
-                  Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6B8E3D),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF6B8E3D).withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.person_add,
-                          size: 40,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Join CardioLink',
-                        style: GoogleFonts.inter(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2D3748),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Create your account for better health monitoring',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: const Color(0xFF718096),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  Text(
+                    'Join CardioLink',
+                    style: GoogleFonts.poppins(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create your account for better\nhealth monitoring',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
 
                   const SizedBox(height: 32),
 
-                  // User Type Selection
-                  Text(
-                    'Account Type',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF2D3748),
+                  // Main Form Container with Glassmorphism
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
+                        ),
+                      ],
                     ),
-                  ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // User Type Selection
+                        Text(
+                          'Account Type',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
@@ -749,12 +984,20 @@ class _SignupScreenState extends State<SignupScreen> {
                             setState(() {
                               _selectedUserType = value!;
                               // Clear type-specific fields when switching
+                              if (value == 'Patient') {
+                                // Clear ambulance employer fields
+                                _companyNameController.clear();
+                                _licenseNumberController.clear();
+                                _serviceAreaController.clear();
+                              } else {
+                                // Clear patient-specific fields
                               _medicinalAllergies.clear();
                               _foodAllergies.clear();
                               _environmentalAllergies.clear();
                               _allergyNameController.clear();
                               _allergyReactionController.clear();
                               _allergyNotesController.clear();
+                              }
                             });
                           },
                         );
@@ -864,14 +1107,15 @@ class _SignupScreenState extends State<SignupScreen> {
                                 controller: _dateOfBirthController,
                                 label: 'Date of Birth *',
                                 icon: Icons.cake_outlined,
-                                keyboardType: TextInputType.datetime,
+                                onTap: _selectDateOfBirth,
+                                helperText: 'Tap to select date',
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter your date of birth';
+                                    return 'Please select your date of birth';
                                   }
                                   final date = DateTime.tryParse(value.trim());
                                   if (date == null) {
-                                    return 'Please enter a valid date';
+                                    return 'Please select a valid date';
                                   }
                                   if (date.isAfter(DateTime.now())) {
                                     return 'Date of birth cannot be in the future';
@@ -899,29 +1143,49 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                                 child: DropdownButtonFormField<String>(
                                   value: _selectedGender,
+                                  isExpanded: true,
                                   decoration: InputDecoration(
                                     labelText: 'Gender *',
-                                    labelStyle: GoogleFonts.inter(
-                                      color: const Color(0xFF718096),
+                                    labelStyle: GoogleFonts.poppins(
+                                      color: Colors.grey[700],
+                                      fontWeight: FontWeight.w500,
                                     ),
                                     prefixIcon: const Icon(
                                       Icons.wc_outlined,
-                                      color: Color(0xFF6B8E3D),
+                                      color: Color(0xFF4CAF50),
+                                      size: 22,
                                     ),
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide.none,
                                     ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey[200]!,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFF4CAF50),
+                                        width: 2,
+                                      ),
+                                    ),
                                     filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.all(20),
+                                    fillColor: Colors.white.withOpacity(0.9),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 16,
+                                    ),
                                   ),
                                   items: _genderOptions.map((gender) {
                                     return DropdownMenuItem(
                                       value: gender,
                                       child: Text(
                                         gender,
-                                        style: GoogleFonts.inter(),
+                                        style: GoogleFonts.poppins(fontSize: 15),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     );
                                   }).toList(),
@@ -941,25 +1205,17 @@ class _SignupScreenState extends State<SignupScreen> {
 
                           const SizedBox(height: 16),
 
-                          // Allergies Section - Only for Patients
-                          Text(
-                            'Allergies',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          Text(
-                            'Add any allergies you have (optional but recommended)',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: const Color(0xFF718096),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Allergies Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Allergies (Optional)',
+                            subtitle: 'Add any allergies you have',
+                            isExpanded: _showAllergySection,
+                            onToggle: () {
+                              setState(() {
+                                _showAllergySection = !_showAllergySection;
+                              });
+                            },
+                            children: [
 
                           // Allergy Type Selection
                           Container(
@@ -1056,34 +1312,74 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ),
                                   child: DropdownButtonFormField<String>(
                                     value: _selectedAllergyCriticality,
+                                    isExpanded: true,
                                     decoration: InputDecoration(
                                       labelText: 'Criticality',
-                                      labelStyle: GoogleFonts.inter(
-                                      color: const Color(0xFF718096),
-                                    ),
+                                      labelStyle: GoogleFonts.poppins(
+                                        color: Colors.grey[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                       prefixIcon: const Icon(
                                         Icons.priority_high_outlined,
-                                        color: Color(0xFF6B8E3D),
+                                        color: Color(0xFF4CAF50),
+                                        size: 22,
                                       ),
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(12),
                                         borderSide: BorderSide.none,
                                       ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey[200]!,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF4CAF50),
+                                          width: 2,
+                                        ),
+                                      ),
                                       filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding: const EdgeInsets.all(20),
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 16,
+                                      ),
                                     ),
                                     items: [
-                                      DropdownMenuItem(value: 'Low', child: Text('Low')),
-                                      DropdownMenuItem(value: 'Medium', child: Text('Medium')),
-                                      DropdownMenuItem(value: 'High', child: Text('High')),
-                              ],
-                              onChanged: (value) {
-                                setState(() {
+                                      DropdownMenuItem(
+                                        value: 'Low',
+                                        child: Text(
+                                          'Low',
+                                          style: GoogleFonts.poppins(fontSize: 15),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Medium',
+                                        child: Text(
+                                          'Medium',
+                                          style: GoogleFonts.poppins(fontSize: 15),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'High',
+                                        child: Text(
+                                          'High',
+                                          style: GoogleFonts.poppins(fontSize: 15),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
                                         _selectedAllergyCriticality = value!;
-                                });
-                              },
-                            ),
+                                      });
+                                    },
+                                  ),
                                 ),
                               ),
                             ],
@@ -1137,18 +1433,20 @@ class _SignupScreenState extends State<SignupScreen> {
                               _buildAllergySection('Environmental Allergies', _environmentalAllergies, 'environmental'),
                             ],
                           ],
-                          const SizedBox(height: 24),
+                            ],
+                          ), // End of Allergy expandable section
 
-                          // Address Section
-                          Text(
-                            'Address Information',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Address Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Address Information (Optional)',
+                            subtitle: 'Your home address details',
+                            isExpanded: _showAddressSection,
+                            onToggle: () {
+                              setState(() {
+                                _showAddressSection = !_showAddressSection;
+                              });
+                            },
+                            children: [
 
                           _buildInputField(
                             controller: _streetController,
@@ -1201,19 +1499,20 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ],
                           ),
+                            ],
+                          ), // End of Address expandable section
 
-                          const SizedBox(height: 24),
-
-                          // Emergency Contact Section
-                          Text(
-                            'Emergency Contact',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Emergency Contact Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Emergency Contact (Optional)',
+                            subtitle: 'Someone we can contact in case of emergency',
+                            isExpanded: _showEmergencyContactSection,
+                            onToggle: () {
+                              setState(() {
+                                _showEmergencyContactSection = !_showEmergencyContactSection;
+                              });
+                            },
+                            children: [
 
                           Row(
                             children: [
@@ -1243,19 +1542,20 @@ class _SignupScreenState extends State<SignupScreen> {
                             icon: Icons.phone_outlined,
                             keyboardType: TextInputType.phone,
                           ),
+                            ],
+                          ), // End of Emergency Contact expandable section
 
-                          const SizedBox(height: 24),
-
-                          // Insurance Section
-                          Text(
-                            'Insurance Information',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Insurance Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Insurance Information (Optional)',
+                            subtitle: 'Your health insurance details',
+                            isExpanded: _showInsuranceSection,
+                            onToggle: () {
+                              setState(() {
+                                _showInsuranceSection = !_showInsuranceSection;
+                              });
+                            },
+                            children: [
 
                           _buildInputField(
                             controller: _insuranceProviderController,
@@ -1293,19 +1593,20 @@ class _SignupScreenState extends State<SignupScreen> {
                             icon: Icons.calendar_today_outlined,
                             keyboardType: TextInputType.datetime,
                           ),
+                            ],
+                          ), // End of Insurance expandable section
 
-                          const SizedBox(height: 24),
-
-                          // Social History Section
-                          Text(
-                            'Social History',
-                                    style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Social History Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Social History (Optional)',
+                            subtitle: 'Lifestyle and occupation information',
+                            isExpanded: _showSocialHistorySection,
+                            onToggle: () {
+                              setState(() {
+                                _showSocialHistorySection = !_showSocialHistorySection;
+                              });
+                            },
+                            children: [
 
                           // Tobacco Use
                           _buildSocialHistoryDropdown(
@@ -1411,19 +1712,20 @@ class _SignupScreenState extends State<SignupScreen> {
                             label: 'Occupation',
                             icon: Icons.work_outline,
                           ),
+                            ],
+                          ), // End of Social History expandable section
 
-                          const SizedBox(height: 24),
-
-                          // Special Directives Section
-                          Text(
-                            'Special Directives',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Special Directives Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Special Directives (Optional)',
+                            subtitle: 'Healthcare directives and preferences',
+                            isExpanded: _showSpecialDirectivesSection,
+                            onToggle: () {
+                              setState(() {
+                                _showSpecialDirectivesSection = !_showSpecialDirectivesSection;
+                              });
+                            },
+                            children: [
 
                           // DNR Checkbox
                           Container(
@@ -1552,11 +1854,80 @@ class _SignupScreenState extends State<SignupScreen> {
                             maxLines: 3,
                             helperText: 'Any religious instructions or preferences',
                           ),
+                            ],
+                          ), // End of Special Directives expandable section
 
                         ] else if (_selectedUserType == 'Ambulance Employer') ...[
                           const SizedBox(height: 16),
 
-                          // Coming Soon Notice for Ambulance Employers
+                          // Ambulance Service Information Section - Expandable
+                          _buildExpandableSection(
+                            title: 'Ambulance Service Details (Optional)',
+                            subtitle: 'Company and service information',
+                            isExpanded: _showAmbulanceDetailsSection,
+                            onToggle: () {
+                              setState(() {
+                                _showAmbulanceDetailsSection = !_showAmbulanceDetailsSection;
+                              });
+                            },
+                            children: [
+
+                          // Company Name
+                          _buildInputField(
+                            controller: _companyNameController,
+                            label: 'Company/Organization Name',
+                            icon: Icons.business_outlined,
+                            keyboardType: TextInputType.text,
+                            helperText: 'Optional - Your ambulance service name',
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // License Number
+                          _buildInputField(
+                            controller: _licenseNumberController,
+                            label: 'License Number',
+                            icon: Icons.badge_outlined,
+                            keyboardType: TextInputType.text,
+                            helperText: 'Optional - Your ambulance service license number',
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Service Area
+                          _buildInputField(
+                            controller: _serviceAreaController,
+                            label: 'Service Area',
+                            icon: Icons.map_outlined,
+                            keyboardType: TextInputType.text,
+                            maxLines: 2,
+                            helperText: 'Optional - Areas where you provide ambulance services',
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Emergency Contact for Ambulance
+                          Text(
+                            'Emergency Contact',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF2D3748),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          _buildInputField(
+                            controller: _emergencyPhoneController,
+                            label: 'Emergency Contact Number',
+                            icon: Icons.phone_in_talk_outlined,
+                            keyboardType: TextInputType.phone,
+                            helperText: 'Optional - Contact number for emergencies',
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Info box
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -1575,30 +1946,19 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Ambulance Employer Features',
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF6B8E3D),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Full ambulance service features are coming soon. You can create your account now to get early access.',
+                                  child: Text(
+                                    'You can add more details like vehicles, operating hours, and services after creating your account.',
                                         style: GoogleFonts.inter(
                                           fontSize: 14,
                                           color: const Color(0xFF6B8E3D),
                                         ),
-                                      ),
-                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                            ],
+                          ), // End of Ambulance Details expandable section
                         ],
 
 
@@ -1734,41 +2094,30 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: ElevatedButton(
                             onPressed: authProvider.isLoading ? null : _handleSignup,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6B8E3D),
+                              backgroundColor: const Color(0xFF4CAF50),
                               foregroundColor: Colors.white,
-                              elevation: 0,
+                              elevation: 8,
+                              shadowColor: const Color(0xFF4CAF50).withOpacity(0.4),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(30),
                               ),
-                              disabledBackgroundColor: const Color(0xFF6B8E3D).withOpacity(0.6),
+                              disabledBackgroundColor: const Color(0xFF4CAF50).withOpacity(0.6),
                             ),
                             child: authProvider.isLoading
-                                ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Creating Account...',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            )
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : Text(
                               'Create ${_selectedUserType} Account',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -1776,8 +2125,11 @@ class _SignupScreenState extends State<SignupScreen> {
                       ],
                     ),
                   ),
+                    ],
+                  ),
+                ), // End of Glassmorphism Container
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   // Sign In Link
                   Row(
@@ -1785,9 +2137,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       Text(
                         "Already have an account? ",
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFF718096),
-                          fontSize: 16,
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[600],
+                          fontSize: 14,
                         ),
                       ),
                       TextButton(
@@ -1799,11 +2151,17 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                           );
                         },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                        ),
                         child: Text(
                           'Sign In',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF6B8E3D),
-                            fontSize: 16,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFF4CAF50),
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1816,6 +2174,40 @@ class _SignupScreenState extends State<SignupScreen> {
               );
             },
           ),
+        ),
+        
+            // Back button overlay
+            Positioned(
+              top: 10,
+              left: 10,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Color(0xFF4CAF50),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
