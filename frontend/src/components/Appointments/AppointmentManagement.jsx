@@ -1,62 +1,35 @@
+// AppointmentManagement.jsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, User, Check, X, RefreshCw, Video, 
-  Bell, Copy, CheckCircle, XCircle, Edit, Phone, Mail
+  Bell, Copy, CheckCircle, XCircle, Edit, Phone, Mail, MapPin
 } from 'lucide-react';
 
-const AppointmentManagement = () => {
-  const [appointments, setAppointments] = useState([]);
+const AppointmentManagement = ({ appointments = [] }) => {
+  const [allAppointments, setAllAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showActionModal, setShowActionModal] = useState(false);
-  const [actionType, setActionType] = useState(null); // 'accept', 'reject', 'reschedule'
+  const [actionType, setActionType] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('');
   const [showNotification, setShowNotification] = useState(false);
   const [notificationData, setNotificationData] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Initialize with Millie's appointment
   useEffect(() => {
-    const today = new Date();
-    const appointmentTime = new Date(today);
-    appointmentTime.setHours(16, 0, 0, 0); // 4:00 PM
-
-    const initialAppointments = [
-      {
-        id: 'APT001',
-        patientName: 'Millie',
-        patientEmail: 'millie@example.com',
-        patientPhone: '+92 300 1234567',
-        patientAvatar: 'https://ui-avatars.com/api/?name=Millie&background=random',
-        appointmentDate: appointmentTime.toISOString(),
-        reason: 'Cardiac Evaluation',
-        status: 'pending',
-        notes: 'Patient experiencing mild chest discomfort',
-        requestedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: 'APT002',
-        patientName: 'Millie',
-        patientEmail: 'millie@example.com',
-        patientPhone: '+92 300 1234567',
-        patientAvatar: 'https://ui-avatars.com/api/?name=Millie&background=random',
-        appointmentDate: new Date(today.setDate(today.getDate() + 1)).toISOString(),
-        reason: 'Follow-up Consultation',
-        status: 'pending',
-        notes: 'Regular checkup after medication',
-        requestedDate: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
-      }
-    ];
-
-    setAppointments(initialAppointments);
-  }, []);
+    if (appointments && appointments.length > 0) {
+      setAllAppointments(appointments);
+      console.log('Appointments loaded:', appointments);
+    }
+  }, [appointments]);
 
   const generateVideoCode = () => {
     return Math.floor(1000 + Math.random() * 9000).toString();
   };
 
-  const handleAcceptAppointment = () => {
+  const handleAcceptAppointment = async () => {
     const videoCode = generateVideoCode();
     const updatedAppointment = {
       ...selectedAppointment,
@@ -65,53 +38,103 @@ const AppointmentManagement = () => {
       confirmedAt: new Date().toISOString()
     };
 
-    setAppointments(prev => 
-      prev.map(apt => apt.id === selectedAppointment.id ? updatedAppointment : apt)
-    );
+    setIsUpdating(true);
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/appointments/${selectedAppointment.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: 'confirmed',
+            videoCode: videoCode
+          })
+        }
+      );
 
-    // Show notification
-    setNotificationData({
-      type: 'success',
-      title: 'Appointment Confirmed!',
-      message: `Video consultation code: ${videoCode}`,
-      appointment: updatedAppointment
-    });
-    setShowNotification(true);
-    setShowActionModal(false);
-    setSelectedAppointment(null);
+      if (response.ok) {
+        setAllAppointments(prev => 
+          prev.map(apt => apt.id === selectedAppointment.id ? updatedAppointment : apt)
+        );
 
-    // Send notification to patient (simulation)
-    console.log('📧 Sending notification to patient:', {
-      to: selectedAppointment.patientEmail,
-      subject: 'Appointment Confirmed',
-      videoCode: videoCode,
-      appointmentDate: selectedAppointment.appointmentDate
-    });
+        setNotificationData({
+          type: 'success',
+          title: 'Appointment Confirmed!',
+          message: `Video consultation code: ${videoCode}`,
+          appointment: updatedAppointment
+        });
+        setShowNotification(true);
+      } else {
+        throw new Error('Failed to update appointment');
+      }
+    } catch (error) {
+      console.error('Error confirming appointment:', error);
+      setNotificationData({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to confirm appointment. Please try again.'
+      });
+      setShowNotification(true);
+    } finally {
+      setIsUpdating(false);
+      setShowActionModal(false);
+      setSelectedAppointment(null);
+    }
   };
 
-  const handleRejectAppointment = () => {
-    const updatedAppointment = {
-      ...selectedAppointment,
-      status: 'rejected',
-      rejectedAt: new Date().toISOString()
-    };
+  const handleRejectAppointment = async () => {
+    setIsUpdating(true);
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/appointments/${selectedAppointment.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: 'rejected'
+          })
+        }
+      );
 
-    setAppointments(prev => 
-      prev.map(apt => apt.id === selectedAppointment.id ? updatedAppointment : apt)
-    );
+      if (response.ok) {
+        const updatedAppointment = {
+          ...selectedAppointment,
+          status: 'rejected',
+          rejectedAt: new Date().toISOString()
+        };
 
-    setNotificationData({
-      type: 'error',
-      title: 'Appointment Rejected',
-      message: `Appointment with ${selectedAppointment.patientName} has been rejected.`,
-      appointment: updatedAppointment
-    });
-    setShowNotification(true);
-    setShowActionModal(false);
-    setSelectedAppointment(null);
+        setAllAppointments(prev => 
+          prev.map(apt => apt.id === selectedAppointment.id ? updatedAppointment : apt)
+        );
+
+        setNotificationData({
+          type: 'error',
+          title: 'Appointment Rejected',
+          message: `Appointment with ${selectedAppointment.patientName} has been rejected.`,
+          appointment: updatedAppointment
+        });
+        setShowNotification(true);
+      }
+    } catch (error) {
+      console.error('Error rejecting appointment:', error);
+      setNotificationData({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to reject appointment. Please try again.'
+      });
+      setShowNotification(true);
+    } finally {
+      setIsUpdating(false);
+      setShowActionModal(false);
+      setSelectedAppointment(null);
+    }
   };
 
-  const handleRescheduleAppointment = () => {
+  const handleRescheduleAppointment = async () => {
     if (!rescheduleDate || !rescheduleTime) {
       alert('Please select both date and time for rescheduling');
       return;
@@ -126,21 +149,50 @@ const AppointmentManagement = () => {
       originalDate: selectedAppointment.appointmentDate
     };
 
-    setAppointments(prev => 
-      prev.map(apt => apt.id === selectedAppointment.id ? updatedAppointment : apt)
-    );
+    setIsUpdating(true);
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/appointments/${selectedAppointment.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: 'rescheduled',
+            appointmentDate: newDateTime.toISOString()
+          })
+        }
+      );
 
-    setNotificationData({
-      type: 'info',
-      title: 'Appointment Rescheduled',
-      message: `New time: ${newDateTime.toLocaleString()}`,
-      appointment: updatedAppointment
-    });
-    setShowNotification(true);
-    setShowActionModal(false);
-    setSelectedAppointment(null);
-    setRescheduleDate('');
-    setRescheduleTime('');
+      if (response.ok) {
+        setAllAppointments(prev => 
+          prev.map(apt => apt.id === selectedAppointment.id ? updatedAppointment : apt)
+        );
+
+        setNotificationData({
+          type: 'info',
+          title: 'Appointment Rescheduled',
+          message: `New time: ${newDateTime.toLocaleString()}`,
+          appointment: updatedAppointment
+        });
+        setShowNotification(true);
+      }
+    } catch (error) {
+      console.error('Error rescheduling appointment:', error);
+      setNotificationData({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to reschedule appointment. Please try again.'
+      });
+      setShowNotification(true);
+    } finally {
+      setIsUpdating(false);
+      setShowActionModal(false);
+      setSelectedAppointment(null);
+      setRescheduleDate('');
+      setRescheduleTime('');
+    }
   };
 
   const openActionModal = (appointment, action) => {
@@ -162,8 +214,9 @@ const AppointmentManagement = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+    switch (status?.toLowerCase()) {
+      case 'pending':
+      case 'upcoming': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case 'confirmed': return 'bg-green-100 text-green-800 border-green-300';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
       case 'rescheduled': return 'bg-blue-100 text-blue-800 border-blue-300';
@@ -172,8 +225,9 @@ const AppointmentManagement = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />;
+    switch (status?.toLowerCase()) {
+      case 'pending':
+      case 'upcoming': return <Clock className="w-4 h-4" />;
       case 'confirmed': return <CheckCircle className="w-4 h-4" />;
       case 'rejected': return <XCircle className="w-4 h-4" />;
       case 'rescheduled': return <RefreshCw className="w-4 h-4" />;
@@ -184,17 +238,15 @@ const AppointmentManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Appointment Management</h1>
-          <p className="text-gray-600">Review and manage patient appointment requests</p>
+          <p className="text-gray-600">Manage {allAppointments.length} patient appointment requests</p>
         </motion.div>
 
-        {/* Notification Toast */}
         <AnimatePresence>
           {showNotification && notificationData && (
             <motion.div
@@ -247,173 +299,173 @@ const AppointmentManagement = () => {
                     <div className="text-3xl font-bold text-center text-blue-600 tracking-widest">
                       {notificationData.appointment.videoCode}
                     </div>
-                    <p className="text-xs text-gray-500 text-center mt-2">
-                      Share this code with {notificationData.appointment.patientName}
-                    </p>
                   </div>
                 )}
-
-                <div className="mt-4 text-xs text-gray-500">
-                  <p>📧 Notification sent to {notificationData.appointment.patientEmail}</p>
-                  <p>📱 SMS sent to {notificationData.appointment.patientPhone}</p>
-                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Appointments Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {appointments.map((appointment, index) => (
-            <motion.div
-              key={appointment.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-            >
-              {/* Appointment Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={appointment.patientAvatar}
-                      alt={appointment.patientName}
-                      className="w-16 h-16 rounded-full border-4 border-white shadow-lg"
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold">{appointment.patientName}</h3>
-                      <p className="text-blue-100 text-sm">ID: {appointment.id}</p>
+        {allAppointments.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white rounded-2xl shadow-lg p-12 text-center"
+          >
+            <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-600 text-lg">No appointments available</p>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {allAppointments.map((appointment, index) => (
+              <motion.div
+                key={appointment.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+              >
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg bg-white/20 flex items-center justify-center">
+                        <User className="w-8 h-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">{appointment.patientName || 'Unknown Patient'}</h3>
+                        <p className="text-blue-100 text-sm">ID: {appointment.id?.slice(-8)}</p>
+                      </div>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full border ${getStatusColor(appointment.status)} flex items-center gap-2 bg-white`}>
+                      {getStatusIcon(appointment.status)}
+                      <span className="text-xs font-semibold capitalize">{appointment.status}</span>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full border ${getStatusColor(appointment.status)} flex items-center gap-2 bg-white`}>
-                    {getStatusIcon(appointment.status)}
-                    <span className="text-xs font-semibold capitalize">{appointment.status}</span>
-                  </div>
-                </div>
 
-                {appointment.videoCode && (
-                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-blue-100">Video Code</p>
-                      <p className="text-2xl font-bold tracking-wider">{appointment.videoCode}</p>
+                  {appointment.videoCode && (
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-blue-100">Video Code</p>
+                        <p className="text-2xl font-bold tracking-wider">{appointment.videoCode}</p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(appointment.videoCode)}
+                        className="bg-white/30 hover:bg-white/40 p-2 rounded-lg transition"
+                      >
+                        <Copy className="w-5 h-5" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => copyToClipboard(appointment.videoCode)}
-                      className="bg-white/30 hover:bg-white/40 p-2 rounded-lg transition"
-                    >
-                      <Copy className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Appointment Details */}
-              <div className="p-6 space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="text-sm text-gray-500">Appointment Date & Time</p>
-                    <p className="font-semibold text-gray-800">
-                      {new Date(appointment.appointmentDate).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                    <p className="text-lg font-bold text-blue-600">
-                      {new Date(appointment.appointmentDate).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
+                  )}
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Video className="w-5 h-5 text-green-600 mt-1" />
-                  <div>
-                    <p className="text-sm text-gray-500">Reason for Visit</p>
-                    <p className="font-semibold text-gray-800">{appointment.reason}</p>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-blue-600 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Appointment Date & Time</p>
+                      <p className="font-semibold text-gray-800">
+                        {appointment.formattedDate || new Date(appointment.appointmentDate).toLocaleDateString()}
+                      </p>
+                      <p className="text-lg font-bold text-blue-600">
+                        {appointment.appointmentTime}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-purple-600 mt-1" />
-                  <div>
-                    <p className="text-sm text-gray-500">Contact Information</p>
-                    <p className="text-sm text-gray-800">{appointment.patientEmail}</p>
-                    <p className="text-sm text-gray-800">{appointment.patientPhone}</p>
+                  <div className="flex items-start gap-3">
+                    <Video className="w-5 h-5 text-green-600 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Reason for Visit</p>
+                      <p className="font-semibold text-gray-800">{appointment.reason}</p>
+                    </div>
                   </div>
-                </div>
 
-                {appointment.notes && (
+                  {appointment.location && (
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-5 h-5 text-purple-600 mt-1" />
+                      <div>
+                        <p className="text-sm text-gray-500">Location</p>
+                        <p className="font-semibold text-gray-800">{appointment.location}</p>
+                        {appointment.roomNumber && (
+                          <p className="text-sm text-gray-600">Room {appointment.roomNumber}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-5 h-5 text-purple-600 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Fees</p>
+                      <p className="font-semibold text-gray-800">
+                        Consultation: ${appointment.consultationFee || 0} | Booking: ${appointment.bookingFee || 0}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Patient Notes:</p>
-                    <p className="text-sm text-gray-700">{appointment.notes}</p>
+                    <p className="text-xs text-gray-500 mb-1">Appointment Details:</p>
+                    <p className="text-sm text-gray-700">
+                      Specialty: {appointment.doctorSpecialty || 'N/A'}
+                    </p>
+                    {appointment.joiningCode && (
+                      <p className="text-sm text-gray-700">
+                        Joining Code: {appointment.joiningCode}
+                      </p>
+                    )}
                   </div>
-                )}
 
-                <div className="text-xs text-gray-500">
-                  <p>Requested: {new Date(appointment.requestedDate).toLocaleString()}</p>
-                  {appointment.confirmedAt && (
-                    <p className="text-green-600">✓ Confirmed: {new Date(appointment.confirmedAt).toLocaleString()}</p>
-                  )}
-                  {appointment.rescheduledAt && (
-                    <p className="text-blue-600">↻ Rescheduled: {new Date(appointment.rescheduledAt).toLocaleString()}</p>
+                  {appointment.status?.toLowerCase() === 'pending' || appointment.status?.toLowerCase() === 'upcoming' ? (
+                    <div className="flex gap-3 pt-4 border-t">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => openActionModal(appointment, 'accept')}
+                        disabled={isUpdating}
+                        className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-5 h-5" />
+                        Accept
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => openActionModal(appointment, 'reschedule')}
+                        disabled={isUpdating}
+                        className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="w-5 h-5" />
+                        Reschedule
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => openActionModal(appointment, 'reject')}
+                        disabled={isUpdating}
+                        className="flex-1 bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <X className="w-5 h-5" />
+                        Reject
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="pt-4 border-t">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition flex items-center justify-center gap-2"
+                      >
+                        <Video className="w-5 h-5" />
+                        Start Video Consultation
+                      </motion.button>
+                    </div>
                   )}
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-                {/* Action Buttons */}
-                {appointment.status === 'pending' && (
-                  <div className="flex gap-3 pt-4 border-t">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => openActionModal(appointment, 'accept')}
-                      className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-5 h-5" />
-                      Accept
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => openActionModal(appointment, 'reschedule')}
-                      className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2"
-                    >
-                      <Edit className="w-5 h-5" />
-                      Reschedule
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => openActionModal(appointment, 'reject')}
-                      className="flex-1 bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition flex items-center justify-center gap-2"
-                    >
-                      <X className="w-5 h-5" />
-                      Reject
-                    </motion.button>
-                  </div>
-                )}
-
-                {appointment.status === 'confirmed' && (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition flex items-center justify-center gap-2"
-                  >
-                    <Video className="w-5 h-5" />
-                    Start Video Consultation
-                  </motion.button>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Action Modal */}
         <AnimatePresence>
           {showActionModal && selectedAppointment && (
             <motion.div
@@ -436,11 +488,9 @@ const AppointmentManagement = () => {
 
                 <div className="mb-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src={selectedAppointment.patientAvatar}
-                      alt={selectedAppointment.patientName}
-                      className="w-12 h-12 rounded-full"
-                    />
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User className="w-6 h-6 text-blue-600" />
+                    </div>
                     <div>
                       <p className="font-semibold text-gray-800">{selectedAppointment.patientName}</p>
                       <p className="text-sm text-gray-600">{selectedAppointment.reason}</p>
@@ -497,10 +547,11 @@ const AppointmentManagement = () => {
                   )}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-6 border-t">
                   <button
                     onClick={() => setShowActionModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    disabled={isUpdating}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -510,13 +561,14 @@ const AppointmentManagement = () => {
                       else if (actionType === 'reject') handleRejectAppointment();
                       else if (actionType === 'reschedule') handleRescheduleAppointment();
                     }}
-                    className={`flex-1 px-4 py-2 text-white rounded-lg transition ${
+                    disabled={isUpdating}
+                    className={`flex-1 px-4 py-2 text-white rounded-lg transition disabled:opacity-50 ${
                       actionType === 'accept' ? 'bg-green-500 hover:bg-green-600' :
                       actionType === 'reject' ? 'bg-red-500 hover:bg-red-600' :
                       'bg-blue-500 hover:bg-blue-600'
                     }`}
                   >
-                    Confirm
+                    {isUpdating ? 'Processing...' : 'Confirm'}
                   </button>
                 </div>
               </motion.div>

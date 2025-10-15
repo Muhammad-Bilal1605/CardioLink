@@ -44,13 +44,53 @@ class _DashboardHomeState extends State<DashboardHome> with SingleTickerProvider
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
+void dispose() {
+  _emailController.dispose();
+  _passwordController.dispose();
+  _confirmPasswordController.dispose(); // Add this line
+  _nameController.dispose();
+  _phoneController.dispose();
+  _emergencyContactController.dispose();
+  super.dispose();
+}
   @override
   Widget build(BuildContext context) {
+    // Add this TextFormField after the password field
+TextFormField(
+  controller: _confirmPasswordController,
+  obscureText: true,
+  decoration: InputDecoration(
+    labelText: 'Confirm Password',
+    prefixIcon: Icon(Icons.lock_outline),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+    ),
+  ),
+  validator: (value) {
+    // In your form validation
+if (_formKey.currentState!.validate()) {
+  if (_passwordController.text != _confirmPassword) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Passwords do not match')),
+    );
+    return;
+  }
+  // Rest of your signup logic
+}
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  },
+  onChanged: (value) {
+    setState(() {
+      _confirmPassword = value;
+    });
+  },
+),
     return Scaffold(
       body: _screens[_selectedIndex],
       floatingActionButton: _selectedIndex == 2 ? _buildAnimatedChatFab() : null,
@@ -309,97 +349,122 @@ class _DashboardHomeContent extends StatelessWidget {
   }
 
   Widget _buildUserProfileCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF3366FF), Color(0xFF00CCFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  return Container(
+    padding: EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF3366FF), Color(0xFF00CCFF)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Color(0xFF3366FF).withOpacity(0.3),
+          blurRadius: 15,
+          offset: Offset(0, 5),
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF3366FF).withOpacity(0.3),
-            blurRadius: 15,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Hero(
-            tag: 'profile-avatar',
-            child: CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.white,
-              backgroundImage: NetworkImage(
-                'https://images.unsplash.com/photo-1603415526960-f8f62b36c9a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      ],
+    ),
+    child: Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        // Debug print to see the current user data
+        print('Current User Data: ${authProvider.currentUser}');
+        
+        // Get user name with fallback to email if name is not available
+        String userName = 'Guest User';
+        String userEmail = '';
+        
+        if (authProvider.currentUser != null) {
+          // Try different possible field names for the name
+          final user = authProvider.currentUser!;
+          userName = user['name'] ?? 
+                    user['fullName'] ?? 
+                    user['userName'] ?? 
+                    'Guest User';
+          
+          // Get email if available
+          userEmail = user['email']?.toString() ?? '';
+          
+          // If we have email but no name, use the part before @ as name
+          if ((userName == 'Guest User' || userName.isEmpty) && userEmail.isNotEmpty) {
+            userName = userEmail.split('@').first;
+          }
+          
+          print('Resolved user name: $userName');
+        }
+
+        return Row(
+          children: [
+            Hero(
+              tag: 'profile-avatar',
+              child: CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.white,
+                backgroundImage: NetworkImage(
+                  'https://ui-avatars.com/api/?name=$userName&background=3366FF&color=fff&size=128',
+                ),
               ),
             ),
-          ),
-          SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome Back!',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 14,
+            SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome Back!',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                Consumer<AuthProvider>(
-                  builder: (context, authProvider, child) {
-                    // Fixed: Handle currentUser as Map<String, dynamic>
-                    String userName = 'Guest User';
-                    
-                    if (authProvider.currentUser != null) {
-                      // Access the name from the Map
-                      userName = authProvider.currentUser!['name']?.toString() ?? 'Guest User';
-                    }
-                    
-                    return Text(
-                      userName,
+                  Text(
+                    userName,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (userEmail.isNotEmpty) ...[
+                    SizedBox(height: 2),
+                    Text(
+                      userEmail,
                       style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
                       ),
-                    );
-                  },
-                ),
-                Text(
-                  'Patient ID: #CA2024001',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Badge(
-              smallSize: 8,
-              backgroundColor: Colors.red,
-              child: Icon(
-                Icons.notifications_outlined,
-                color: Colors.white,
-                size: 24,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              padding: EdgeInsets.all(8),
+              child: Badge(
+                smallSize: 8,
+                backgroundColor: Colors.red,
+                child: Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
   Widget _buildHealthStatsRow() {
     return Row(

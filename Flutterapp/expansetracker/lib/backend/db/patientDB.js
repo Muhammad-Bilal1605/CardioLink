@@ -1,3 +1,4 @@
+//patientDB.js
 import mongoose from "mongoose";
 
 let patientConnection = null;

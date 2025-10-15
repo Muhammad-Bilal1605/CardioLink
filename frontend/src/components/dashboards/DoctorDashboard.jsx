@@ -1,21 +1,23 @@
-// Complete DoctorDashboard.jsx with Appointment Management Integration
+// frontend/src/components/dashboards/DoctorDashboard.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   Stethoscope, Users, Calendar, FileText, Clock, ChevronRight, 
-  Activity, Heart, AlertCircle, Plus, User, RefreshCw
+  Activity, Heart, AlertCircle, Plus, User, RefreshCw, Video
 } from "lucide-react";
 import DashboardLayout from "../DashboardLayout";
 import { useAuthStore } from "../../store/authStore";
 import AppointmentManagement from "../Appointments/AppointmentManagement";
+import NewVideocallComponent from "../Chats/NewVideocallComponent";
 
 const DoctorDashboard = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   
-  // State for toggling between dashboard and appointment management
   const [showAppointmentManagement, setShowAppointmentManagement] = useState(false);
+  const [showTeleconsultation, setShowTeleconsultation] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
   
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -31,118 +33,9 @@ const DoctorDashboard = () => {
     totalConsultations: 0
   });
 
-  // Fetch all data on component mount
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const token = localStorage.getItem('token');
-      
-      // Fetch patients
-      const patientsResponse = await fetch('http://localhost:5000/api/patients');
-      if (!patientsResponse.ok) throw new Error('Failed to fetch patients');
-      const patientsData = await patientsResponse.json();
-      
-      const formattedPatients = patientsData.data.map(patient => ({
-        id: patient._id,
-        name: patient.firstName ? `${patient.firstName} ${patient.lastName || ''}`.trim() : patient.name,
-        email: patient.email,
-        phoneNumber: patient.phoneNumber,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(patient.firstName || patient.name || 'P')}&background=random`,
-        lastMessage: "No messages yet",
-        timestamp: new Date(patient.updatedAt || patient.createdAt).toLocaleDateString(),
-        status: "offline",
-        age: patient.age || 'N/A',
-        condition: patient.condition || 'General checkup',
-        lastVisit: patient.lastVisit ? formatLastVisit(patient.lastVisit) : 'First visit'
-      }));
-      
-      setPatients(formattedPatients);
-      setRecentPatients(formattedPatients.slice(0, 3));
-      
-      // Fetch appointments
-      try {
-        const appointmentsResponse = await fetch('http://localhost:5000/api/appointments/doctor', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (appointmentsResponse.ok) {
-          const appointmentsData = await appointmentsResponse.json();
-          const formattedAppointments = appointmentsData.data?.map(apt => ({
-            id: apt._id,
-            patient: apt.patientName || apt.patient?.firstName || 'Unknown',
-            patientId: apt.patientId || apt.patient?._id,
-            time: new Date(apt.appointmentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            date: new Date(apt.appointmentTime).toLocaleDateString(),
-            appointmentDate: apt.appointmentTime,
-            status: apt.status || 'pending',
-            purpose: apt.reason || apt.purpose || 'Consultation'
-          })) || [];
-          
-          setAppointments(formattedAppointments);
-          
-          // Calculate today's appointments
-          const today = new Date().toDateString();
-          const todayAppointments = formattedAppointments.filter(apt => 
-            new Date(apt.appointmentDate).toDateString() === today
-          );
-          
-          const pendingAppointments = formattedAppointments.filter(apt => 
-            apt.status === 'pending'
-          );
-          
-          setStats(prev => ({
-            ...prev,
-            todayAppointments: todayAppointments.length,
-            pendingAppointments: pendingAppointments.length
-          }));
-        }
-      } catch (err) {
-        console.log('Appointments endpoint not available:', err);
-      }
-      
-      // Fetch consultations
-      try {
-        const consultationsResponse = await fetch('http://localhost:5000/api/consultations/doctor', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (consultationsResponse.ok) {
-          const consultationsData = await consultationsResponse.json();
-          setConsultations(consultationsData.data || []);
-          setStats(prev => ({
-            ...prev,
-            totalConsultations: consultationsData.data?.length || 0
-          }));
-        }
-      } catch (err) {
-        console.log('Consultations endpoint not available:', err);
-      }
-      
-      // Update total patients stat
-      setStats(prev => ({
-        ...prev,
-        totalPatients: formattedPatients.length
-      }));
-      
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const formatLastVisit = (date) => {
     const visitDate = new Date(date);
@@ -155,6 +48,189 @@ const DoctorDashboard = () => {
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return visitDate.toLocaleDateString();
+  };
+
+  const mapPatientNames = (appointmentsList, patientsList) => {
+    const patientMap = {};
+    patientsList.forEach(patient => {
+      patientMap[patient._id] = patient.firstName 
+        ? `${patient.firstName} ${patient.lastName || ''}`.trim() 
+        : patient.name;
+    });
+
+    return appointmentsList.map(apt => ({
+      ...apt,
+      patient: patientMap[apt.patientId] || apt.patientName || 'Unknown',
+      patientName: patientMap[apt.patientId] || apt.patientName || 'Unknown'
+    }));
+  };
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const doctorId = user?._id || localStorage.getItem('doctorId');
+      
+      if (!doctorId) {
+        throw new Error('Doctor ID not found. Please log in again.');
+      }
+
+      console.log('📋 Fetching data for doctor:', doctorId);
+      console.log('🔑 Token:', token ? 'Available' : 'Not found');
+
+      let allPatients = [];
+
+      // Fetch patients FIRST
+      try {
+        const patientsResponse = await fetch('http://localhost:5000/api/patients');
+        if (patientsResponse.ok) {
+          const patientsData = await patientsResponse.json();
+          
+          const formattedPatients = patientsData.data.map(patient => ({
+            id: patient._id,
+            name: patient.firstName ? `${patient.firstName} ${patient.lastName || ''}`.trim() : patient.name,
+            email: patient.email,
+            phoneNumber: patient.phoneNumber,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(patient.firstName || patient.name || 'P')}&background=random`,
+            age: patient.age || 'N/A',
+            gender: patient.gender,
+            bloodGroup: patient.bloodGroup,
+            address: patient.address,
+            condition: patient.condition || 'General checkup',
+            lastVisit: patient.lastVisit ? formatLastVisit(patient.lastVisit) : 'First visit',
+            _id: patient._id,
+            firstName: patient.firstName,
+            lastName: patient.lastName
+          }));
+          
+          allPatients = patientsData.data;
+          setPatients(formattedPatients);
+          setRecentPatients(formattedPatients.slice(0, 3));
+          
+          setStats(prev => ({
+            ...prev,
+            totalPatients: formattedPatients.length
+          }));
+        }
+      } catch (err) {
+        console.error('❌ Patients endpoint error:', err);
+      }
+
+      // Fetch appointments from database
+      try {
+        const appointmentsResponse = await fetch(
+          `http://localhost:5000/api/appointments/doctor/${doctorId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        console.log('📡 Appointments API Response Status:', appointmentsResponse.status);
+
+        if (appointmentsResponse.ok) {
+          const appointmentsData = await appointmentsResponse.json();
+          console.log('✅ Appointments data received:', appointmentsData);
+
+          let formattedAppointments = (appointmentsData.data || []).map(apt => {
+            // Find patient details from allPatients
+            const patientDetails = allPatients.find(p => p._id === apt.patientId);
+            
+            return {
+              id: apt.id || apt._id,
+              patientId: apt.patientId,
+              patient: apt.patientName || 'Unknown',
+              patientName: apt.patientName || 'Unknown',
+              time: apt.appointmentTime || new Date(apt.appointmentDate).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }),
+              date: apt.formattedDate || new Date(apt.appointmentDate).toLocaleDateString(),
+              appointmentDate: apt.appointmentDate,
+              status: apt.status === 'Upcoming' ? 'pending' : apt.status?.toLowerCase() || 'pending',
+              purpose: apt.reason || 'Consultation',
+              reason: apt.reason || 'Consultation',
+              doctorName: apt.doctorName,
+              doctorSpecialty: apt.doctorSpecialty,
+              location: apt.location,
+              roomNumber: apt.roomNumber,
+              joiningCode: apt.joiningCode,
+              consultationFee: apt.consultationFee,
+              bookingFee: apt.bookingFee,
+              paymentMethod: apt.paymentMethod,
+              // Add patient details for teleconsultation
+              patientDetails: patientDetails ? {
+                id: patientDetails._id,
+                name: patientDetails.firstName 
+                  ? `${patientDetails.firstName} ${patientDetails.lastName || ''}`.trim() 
+                  : patientDetails.name,
+                firstName: patientDetails.firstName,
+                lastName: patientDetails.lastName,
+                email: patientDetails.email,
+                phoneNumber: patientDetails.phoneNumber,
+                age: patientDetails.age,
+                gender: patientDetails.gender,
+                bloodGroup: patientDetails.bloodGroup,
+                address: patientDetails.address,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  patientDetails.firstName || patientDetails.name || 'P'
+                )}&background=random`,
+                appointmentDate: apt.appointmentDate,
+                appointmentTime: apt.appointmentTime,
+                appointmentReason: apt.reason,
+                location: apt.location,
+                roomNumber: apt.roomNumber,
+                joiningCode: apt.joiningCode,
+                timestamp: new Date(apt.appointmentDate).toLocaleDateString(),
+                status: 'offline'
+              } : null
+            };
+          });
+
+          // Map patient names from patients data
+          if (allPatients.length > 0) {
+            formattedAppointments = mapPatientNames(formattedAppointments, allPatients);
+            console.log('✅ Patient names mapped:', formattedAppointments);
+          }
+
+          setAppointments(formattedAppointments);
+          console.log('✅ Formatted appointments:', formattedAppointments.length, 'appointments');
+
+          // Calculate today's appointments
+          const today = new Date().toDateString();
+          const todayAppointments = formattedAppointments.filter(apt => 
+            new Date(apt.appointmentDate).toDateString() === today
+          );
+
+          const pendingAppointments = formattedAppointments.filter(apt => 
+            apt.status === 'pending' || apt.status === 'upcoming'
+          );
+
+          setStats(prev => ({
+            ...prev,
+            todayAppointments: todayAppointments.length,
+            pendingAppointments: pendingAppointments.length,
+            totalConsultations: formattedAppointments.length
+          }));
+        } else {
+          console.log('❌ Appointments API error:', appointmentsResponse.status, appointmentsResponse.statusText);
+          const errorData = await appointmentsResponse.json();
+          console.log('Error details:', errorData);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching appointments:', err);
+      }
+
+    } catch (err) {
+      console.error('❌ Error fetching dashboard data:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleViewAllAppointments = () => {
@@ -171,11 +247,23 @@ const DoctorDashboard = () => {
 
   const handleBackToDashboard = () => {
     setShowAppointmentManagement(false);
-    // Refresh data when coming back
+    setShowTeleconsultation(false);
+    setSelectedPatient(null);
     fetchDashboardData();
   };
 
-  // Animation variants
+  const handleStartConsultation = (appointment) => {
+    console.log('Starting consultation for appointment:', appointment);
+    
+    if (!appointment.patientDetails) {
+      alert('Patient details not available. Please refresh the page.');
+      return;
+    }
+    
+    setSelectedPatient(appointment.patientDetails);
+    setShowTeleconsultation(true);
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -227,11 +315,11 @@ const DoctorDashboard = () => {
     );
   }
 
-  return (
-    <DashboardLayout title="Doctor Dashboard" role="doctor">
-      {showAppointmentManagement ? (
+  // Show Teleconsultation Screen
+  if (showTeleconsultation && selectedPatient) {
+    return (
+      <DashboardLayout title="Teleconsultation" role="doctor">
         <div>
-          {/* Back Button */}
           <motion.button
             onClick={handleBackToDashboard}
             className="mb-4 ml-4 px-6 py-3 bg-white text-blue-600 rounded-lg shadow-md hover:shadow-lg transition flex items-center gap-2 font-semibold"
@@ -242,8 +330,37 @@ const DoctorDashboard = () => {
             Back to Dashboard
           </motion.button>
           
-          {/* Appointment Management Component */}
-          <AppointmentManagement />
+          <NewVideocallComponent 
+            patient={selectedPatient}
+            doctor={user || {
+              id: user?._id,
+              name: user?.name,
+              email: user?.email,
+              specialization: user?.specialization,
+              avatar: user?.avatar
+            }}
+            onClose={handleBackToDashboard}
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout title="Doctor Dashboard" role="doctor">
+      {showAppointmentManagement ? (
+        <div>
+          <motion.button
+            onClick={handleBackToDashboard}
+            className="mb-4 ml-4 px-6 py-3 bg-white text-blue-600 rounded-lg shadow-md hover:shadow-lg transition flex items-center gap-2 font-semibold"
+            whileHover={{ scale: 1.02, x: -5 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <ChevronRight className="w-5 h-5 rotate-180" />
+            Back to Dashboard
+          </motion.button>
+          
+          <AppointmentManagement appointments={appointments} />
         </div>
       ) : (
         <motion.div 
@@ -252,7 +369,6 @@ const DoctorDashboard = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {/* Header */}
           <motion.div 
             className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 bg-gradient-to-r from-green-600 to-green-900 rounded-2xl p-6 shadow-lg text-white"
             initial={{ y: -20, opacity: 0 }}
@@ -283,7 +399,6 @@ const DoctorDashboard = () => {
             </div>
           </motion.div>
           
-          {/* Stats cards */}
           <motion.div 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
             variants={containerVariants}
@@ -363,7 +478,6 @@ const DoctorDashboard = () => {
             </motion.div>
           </motion.div>
 
-          {/* Today's appointments */}
           <motion.div 
             className="bg-white rounded-2xl shadow-md overflow-hidden mb-8"
             initial={{ opacity: 0, y: 20 }}
@@ -424,7 +538,7 @@ const DoctorDashboard = () => {
                               <User className="h-5 w-5" />
                             </div>
                             <div className="text-sm font-medium text-gray-900">
-                              {appointment.patient}
+                              {appointment.patientName}
                             </div>
                           </div>
                         </td>
@@ -439,34 +553,38 @@ const DoctorDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${appointment.status === 'confirmed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : appointment.status === 'completed'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'}`}
+                            ${appointment.status === 'pending' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : appointment.status === 'confirmed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'}`}
                           >
                             {appointment.status}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
+                          {appointment.status === 'confirmed' ? (
                             <motion.button 
-                              onClick={() => navigate(`/chats`)}
-                              className="px-3 py-1 text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                              onClick={() => handleStartConsultation(appointment)}
+                              className="px-4 py-2 text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all flex items-center gap-2 shadow-md"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
-                              Chat
+                              <Video className="w-4 h-4" />
+                              Start Consultation
                             </motion.button>
-                            <motion.button 
-                              onClick={() => navigate(`/chats`)}
-                              className="px-3 py-1 text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              Start Call
-                            </motion.button>
-                          </div>
+                          ) : (
+                            <div className="flex space-x-2">
+                              <motion.button 
+                                onClick={() => navigate(`/chats`)}
+                                className="px-3 py-1 text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                Chat
+                              </motion.button>
+                            </div>
+                          )}
                         </td>
                       </motion.tr>
                     ))}
@@ -489,9 +607,7 @@ const DoctorDashboard = () => {
             </div>
           </motion.div>
 
-          {/* Recent patients and Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            {/* Recent patients */}
             <motion.div 
               className="lg:col-span-2 bg-white rounded-2xl shadow-md overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
@@ -501,57 +617,63 @@ const DoctorDashboard = () => {
               <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                   <Users className="h-5 w-5 mr-2 text-indigo-600" />
-                  Recent Patients
+                  All Patients ({patients.length})
                 </h3>
               </div>
-              <div className="divide-y divide-gray-100">
-                {recentPatients.length > 0 ? (
-                  recentPatients.map((patient, index) => (
-                    <motion.div 
-                      key={patient.id} 
-                      className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 * index + 0.4, duration: 0.3 }}
-                      whileHover={{ backgroundColor: "#f9fafb" }}
-                      onClick={() => navigate(`/chats`)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <img 
-                            src={patient.avatar}
-                            alt={patient.name}
-                            className="h-10 w-10 rounded-full mr-4"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{patient.name}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              <span className="inline-flex items-center mr-3">
-                                <span className="h-2 w-2 bg-gray-300 rounded-full mr-1"></span>
-                                Age: {patient.age}
-                              </span>
-                              <span className="inline-flex items-center">
-                                <span className="h-2 w-2 bg-indigo-400 rounded-full mr-1"></span>
-                                {patient.condition}
-                              </span>
-                            </p>
+              <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {patients.length > 0 ? (
+                  patients.map((patient, index) => {
+                    const hasAppointment = appointments.some(apt => apt.patientId === patient.id);
+                    
+                    return (
+                      <motion.div 
+                        key={patient.id} 
+                        className={`px-6 py-4 transition-colors ${hasAppointment ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50 opacity-60 cursor-not-allowed'}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 * index + 0.4, duration: 0.3 }}
+                        whileHover={hasAppointment ? { backgroundColor: "#f9fafb" } : {}}
+                        onClick={() => hasAppointment && navigate(`/chats`)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <img 
+                              src={patient.avatar}
+                              alt={patient.name}
+                              className="h-10 w-10 rounded-full mr-4"
+                            />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                <span className="inline-flex items-center mr-3">
+                                  <span className="h-2 w-2 bg-gray-300 rounded-full mr-1"></span>
+                                  Age: {patient.age}
+                                </span>
+                                <span className="inline-flex items-center">
+                                  <span className={`h-2 w-2 rounded-full mr-1 ${hasAppointment ? 'bg-indigo-400' : 'bg-red-400'}`}></span>
+                                  {hasAppointment ? patient.condition : 'No appointment'}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-xs text-gray-500 mr-4 bg-gray-100 px-2 py-1 rounded-full">
+                              Last visit: {patient.lastVisit}
+                            </span>
+                            <motion.button 
+                              className={`p-2 rounded-full ${hasAppointment ? 'text-indigo-600 hover:text-indigo-800 bg-indigo-50' : 'text-gray-400 bg-gray-200 cursor-not-allowed'}`}
+                              whileHover={hasAppointment ? { scale: 1.1, backgroundColor: "#e0e7ff" } : {}}
+                              whileTap={hasAppointment ? { scale: 0.9 } : {}}
+                              disabled={!hasAppointment}
+                              title={hasAppointment ? 'Chat with patient' : 'No appointment scheduled'}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </motion.button>
                           </div>
                         </div>
-                        <div className="flex items-center">
-                          <span className="text-xs text-gray-500 mr-4 bg-gray-100 px-2 py-1 rounded-full">
-                            Last visit: {patient.lastVisit}
-                          </span>
-                          <motion.button 
-                            className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-full"
-                            whileHover={{ scale: 1.1, backgroundColor: "#e0e7ff" }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </motion.button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
+                      </motion.div>
+                    );
+                  })
                 ) : (
                   <div className="px-6 py-12 text-center text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -559,18 +681,8 @@ const DoctorDashboard = () => {
                   </div>
                 )}
               </div>
-              <div className="px-6 py-4 bg-gray-50">
-                <motion.button 
-                  onClick={() => navigate('/chats')}
-                  className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center"
-                  whileHover={{ x: 5 }}
-                >
-                  View all patients <ChevronRight className="h-4 w-4 ml-1" />
-                </motion.button>
-              </div>
             </motion.div>
 
-            {/* Quick Actions */}
             <motion.div 
               className="bg-white rounded-2xl shadow-md overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
@@ -626,93 +738,6 @@ const DoctorDashboard = () => {
               </div>
             </motion.div>
           </div>
-
-          {/* Recent Consultations Section */}
-          {consultations.length > 0 && (
-            <motion.div 
-              className="bg-white rounded-2xl shadow-md overflow-hidden mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-            >
-              <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <Activity className="h-5 w-5 mr-2 text-purple-600" />
-                  Recent Consultations
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Patient
-                      </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Diagnosis
-                      </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {consultations.slice(0, 5).map((consultation, index) => (
-                      <motion.tr 
-                        key={consultation._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * index, duration: 0.3 }}
-                        whileHover={{ backgroundColor: "#f9fafb" }}
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-9 w-9 flex-shrink-0 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-3">
-                              <User className="h-5 w-5" />
-                            </div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {consultation.patientName}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-700">
-                            {new Date(consultation.consultationDate).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
-                            {consultation.consultationType}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-700">
-                            {consultation.diagnosis || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${consultation.status === 'completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'}`}
-                          >
-                            {consultation.status}
-                          </span>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
         </motion.div>
       )}
     </DashboardLayout>

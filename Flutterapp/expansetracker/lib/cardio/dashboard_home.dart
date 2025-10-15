@@ -1,7 +1,13 @@
-//dashboard home - Enhanced UI with new color palette
+// dashboard_home_complete.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:animations/animations.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
+
 import '../provider/auth_provider.dart';
 import 'appointment_screen.dart';
 import 'new_videocall_screen.dart';
@@ -11,6 +17,7 @@ import 'ehr_screen.dart';
 import 'patient_requestsAmbulance_screen.dart';
 import 'ambulance_map_screen.dart';
 import 'login_screen.dart';
+import 'dashboard_components.dart';
 
 class DashboardHome extends StatefulWidget {
   @override
@@ -24,7 +31,7 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
   late TabController _tabController;
 
   final List<Widget> _patientScreens = [
-    _DashboardHomeContent(),
+    _EnhancedDashboardHomeContent(),
     AppointmentScreen(),
     NewVideocallScreen(),
     PharmacyScreen(),
@@ -81,45 +88,39 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
         String userType = authProvider.userType ?? 'patient';
 
         if (userType == 'ambulance_employer') {
-          return _buildAmbulanceEmployerUI();
+          return _buildEnhancedAmbulanceEmployerUI();
         } else {
-          return _buildPatientUI();
+          return _buildEnhancedPatientUI();
         }
       },
     );
   }
 
-  Widget _buildPatientUI() {
+  Widget _buildEnhancedPatientUI() {
     return Scaffold(
+      backgroundColor: Color(0xFFF5F6FA),
       body: _patientScreens[_selectedIndex],
-      floatingActionButton: _selectedIndex == 2 ? _buildAnimatedVideoCallFab() : null,
-      bottomNavigationBar: _buildAnimatedBottomNavBar(),
+      floatingActionButton: _selectedIndex == 2 ? _buildEnhancedVideoCallFab() : null,
+      bottomNavigationBar: _buildEnhancedBottomNavBar(),
     );
   }
 
-  Widget _buildAmbulanceEmployerUI() {
+  Widget _buildEnhancedAmbulanceEmployerUI() {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF5F9FF),
-              Color(0xFFE8F4F8),
-            ],
-          ),
+          color: Color(0xFFF5F6FA),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildAmbulanceEmployerHeader(),
-              _buildModernTabBar(),
+              _buildEnhancedAmbulanceEmployerHeader(),
+              _buildEnhancedTabBar(),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _AmbulanceEmployerDashboardContent(
+                    _EnhancedAmbulanceEmployerDashboardContent(
                       onViewOnMap: _navigateToMapScreen,
                     ),
                     PatientRequestsAmbulanceScreen(),
@@ -134,110 +135,99 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  Widget _buildAmbulanceEmployerHeader() {
+  Widget _buildEnhancedAmbulanceEmployerHeader() {
     return Container(
       padding: EdgeInsets.all(20),
+      margin: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFF4757), Color(0xFFFF6B6B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFFFF4757).withOpacity(0.3),
-            blurRadius: 20,
-            offset: Offset(0, 10),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Color(0xFFE5E7EB), width: 1),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 2,
+                  color: Color(0xFF16A34A),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.local_hospital,
+                    color: Colors.white,
+                    size: 24,
                   ),
                 ),
-                child: Icon(
-                  Icons.local_hospital,
-                  color: Colors.white,
-                  size: 32,
-                ),
               ),
-              SizedBox(width: 15),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'CardioLink',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
+                        color: Color(0xFF1E1E1E),
                       ),
                     ),
                     Text(
                       'Ambulance Portal',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Color(0xFF6B7280),
                       ),
                     ),
                   ],
                 ),
               ),
-              InkWell(
-                onTap: () => _showSettingsBottomSheet(context),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: EdgeInsets.all(10),
+              IconButton(
+                onPressed: () => _showEnhancedSettingsBottomSheet(context),
+                icon: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Color(0xFF16A34A),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    Icons.settings_outlined,
-                    color: Colors.white,
-                    size: 24,
+                  child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.settings_outlined,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          
-          SizedBox(height: 15),
-          
+          SizedBox(height: 12),
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               return Container(
-                padding: EdgeInsets.all(15),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 1,
-                  ),
+                  color: Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Color(0xFFE5E7EB)),
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Colors.white,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF16A34A),
+                      ),
                       child: Icon(
                         Icons.person,
-                        color: Color(0xFFFF4757),
-                        size: 28,
+                        color: Colors.white,
+                        size: 20,
                       ),
                     ),
                     SizedBox(width: 12),
@@ -247,17 +237,17 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                         children: [
                           Text(
                             authProvider.userDisplayName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Color(0xFF1E1E1E),
                             ),
                           ),
                           Text(
                             authProvider.userEmail,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Color(0xFF6B7280),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -267,31 +257,24 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Color(0xFF22C55E),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 8,
-                            height: 8,
+                            width: 6,
+                            height: 6,
                             decoration: BoxDecoration(
-                              color: Color(0xFF24C48E),
+                              color: Colors.white,
                               shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0xFF24C48E).withOpacity(0.5),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
-                                ),
-                              ],
                             ),
                           ),
                           SizedBox(width: 6),
                           Text(
                             'Active',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -310,48 +293,47 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  Widget _buildModernTabBar() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+  Widget _buildEnhancedTabBar() {
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 8, vertical: 8), // Reduced margin
+    child: Container(
+      padding: EdgeInsets.all(2), // Reduced padding
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 5),
-          ),
-        ],
+        color: Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Color(0xFFE5E7EB)),
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFF4757), Color(0xFFFF6B6B)],
-          ),
-          borderRadius: BorderRadius.circular(12),
+          color: Color(0xFF16A34A),
+          borderRadius: BorderRadius.circular(6),
         ),
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey[600],
-        labelStyle: GoogleFonts.poppins(
-          fontSize: 13,
+        unselectedLabelColor: Color(0xFF6B7280),
+        labelStyle: GoogleFonts.inter(
+          fontSize: 10, // Reduced font size
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.poppins(
-          fontSize: 13,
+        unselectedLabelStyle: GoogleFonts.inter(
+          fontSize: 10, // Reduced font size
           fontWeight: FontWeight.w500,
         ),
-        padding: EdgeInsets.all(4),
         tabs: [
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.dashboard, size: 18),
-                SizedBox(width: 6),
-                Text('Dashboard'),
+                Icon(Icons.dashboard, size: 12), // Reduced icon size
+                SizedBox(width: 2), // Reduced spacing
+                Flexible(
+                  child: Text(
+                    'Dashboard',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
               ],
             ),
           ),
@@ -360,9 +342,15 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.people_outline, size: 18),
-                SizedBox(width: 6),
-                Text('Requests'),
+                Icon(Icons.people_outline, size: 12), // Reduced icon size
+                SizedBox(width: 2), // Reduced spacing
+                Flexible(
+                  child: Text(
+                    'Requests',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
               ],
             ),
           ),
@@ -371,136 +359,90 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.map, size: 18),
-                SizedBox(width: 6),
-                Text('Map'),
+                Icon(Icons.map, size: 12), // Reduced icon size
+                SizedBox(width: 2), // Reduced spacing
+                Flexible(
+                  child: Text(
+                    'Map',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildAnimatedBottomNavBar() {
+  Widget _buildEnhancedBottomNavBar() {
     return Container(
+      margin: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFF23446C),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF23446C).withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: Offset(0, -5),
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-            if (index == 2) {
-              _animationController.forward().then((_) => _animationController.reverse());
-            }
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Color(0xFF24C48E),
-        unselectedItemColor: Color(0xFFC0D3DF),
-        backgroundColor: Color(0xFF23446C),
-        elevation: 0,
-        selectedFontSize: 12,
-        unselectedFontSize: 10,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        selectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-        items: [
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _selectedIndex == 0
-                    ? Color(0xFF24C48E).withOpacity(0.2)
-                    : Colors.transparent,
-              ),
-              child: Icon(Icons.dashboard, size: 24),
-            ),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _selectedIndex == 1
-                    ? Color(0xFF24C48E).withOpacity(0.2)
-                    : Colors.transparent,
-              ),
-              child: Icon(Icons.calendar_today, size: 24),
-            ),
-            label: 'Appointments',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _selectedIndex == 2
-                    ? Color(0xFF24C48E).withOpacity(0.2)
-                    : Colors.transparent,
-              ),
-              child: Icon(Icons.video_call, size: 24),
-            ),
-            label: 'Video Call',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _selectedIndex == 3
-                    ? Color(0xFF24C48E).withOpacity(0.2)
-                    : Colors.transparent,
-              ),
-              child: Icon(Icons.local_pharmacy, size: 24),
-            ),
-            label: 'Pharmacy',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _selectedIndex == 4
-                    ? Color(0xFF24C48E).withOpacity(0.2)
-                    : Colors.transparent,
-              ),
-              child: Icon(Icons.local_hospital, size: 24),
-            ),
-            label: 'Ambulance',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _selectedIndex == 5
-                    ? Color(0xFF24C48E).withOpacity(0.2)
-                    : Colors.transparent,
-              ),
-              child: Icon(Icons.folder_shared, size: 24),
-            ),
-            label: 'EHR',
-          ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+              if (index == 2) {
+                _animationController.forward().then((_) => _animationController.reverse());
+              }
+            });
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: Color(0xFF16A34A),
+          unselectedItemColor: Color(0xFF6B7280),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedFontSize: 12,
+          unselectedFontSize: 11,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
+          items: [
+            _buildBottomNavItem(Icons.dashboard, 'Dashboard', 0),
+            _buildBottomNavItem(Icons.calendar_today, 'Appointments', 1),
+            _buildBottomNavItem(Icons.video_call, 'Video Call', 2),
+            _buildBottomNavItem(Icons.local_pharmacy, 'Pharmacy', 3),
+            _buildBottomNavItem(Icons.local_hospital, 'Ambulance', 4),
+            _buildBottomNavItem(Icons.folder_shared, 'EHR', 5),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAnimatedVideoCallFab() {
+  BottomNavigationBarItem _buildBottomNavItem(IconData icon, String label, int index) {
+    return BottomNavigationBarItem(
+      icon: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _selectedIndex == index
+              ? Color(0xFF16A34A).withOpacity(0.1)
+              : Colors.transparent,
+        ),
+        child: Icon(icon, size: 22),
+      ),
+      label: label,
+    );
+  }
+
+  Widget _buildEnhancedVideoCallFab() {
     return AnimatedBuilder(
       animation: _fabAnimation,
       builder: (context, child) {
@@ -508,34 +450,12 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
           scale: _fabAnimation.value,
           child: FloatingActionButton(
             onPressed: () {},
-            backgroundColor: Color(0xFF24C48E),
+            backgroundColor: Color(0xFF16A34A),
             elevation: 8,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF24C48E),
-                    Color(0xFF1FA876),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF24C48E).withOpacity(0.5),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.video_call,
-                color: Colors.white,
-                size: 28,
-              ),
+            child: Icon(
+              Icons.video_call,
+              color: Colors.white,
+              size: 24,
             ),
           ),
         );
@@ -543,7 +463,7 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  void _showSettingsBottomSheet(BuildContext context) {
+  void _showEnhancedSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -553,8 +473,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(25),
-            topRight: Radius.circular(25),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
         ),
         child: Column(
@@ -562,9 +482,9 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
             Container(
               width: 40,
               height: 4,
-              margin: EdgeInsets.symmetric(vertical: 15),
+              margin: EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: Color(0xFFC0D3DF),
+                color: Color(0xFFE5E7EB),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -574,21 +494,20 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                 children: [
                   Text(
                     'Settings',
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF292942),
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E1E1E),
                     ),
                   ),
                   Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: Color(0xFFC0D3DF)),
+                    icon: Icon(Icons.close, color: Color(0xFF6B7280)),
                   ),
                 ],
               ),
             ),
-            Divider(height: 1, color: Color(0xFFEFF9FE)),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(20),
@@ -599,48 +518,59 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                         return Container(
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF23446C), Color(0xFF2A5380)],
-                            ),
-                            borderRadius: BorderRadius.circular(15),
+                            color: Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(0xFFE5E7EB)),
                           ),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                radius: 25,
-                                backgroundColor: Colors.white,
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFF16A34A),
+                                ),
                                 child: Icon(
                                   Icons.person,
-                                  color: Color(0xFF23446C),
-                                  size: 28,
+                                  color: Colors.white,
+                                  size: 20,
                                 ),
                               ),
-                              SizedBox(width: 15),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       authProvider.userDisplayName,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                        color: Color(0xFF1E1E1E),
                                       ),
                                     ),
                                     Text(
                                       authProvider.userEmail,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: Colors.white.withOpacity(0.9),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Color(0xFF6B7280),
                                       ),
                                     ),
-                                    Text(
-                                      authProvider.isAmbulanceEmployer ? 'Ambulance Employer' : 'Patient',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Color(0xFF24C48E),
-                                        fontWeight: FontWeight.w500,
+                                    SizedBox(height: 4),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFD1FAE5),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        authProvider.isAmbulanceEmployer ? 'Ambulance Employer' : 'Patient',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          color: Color(0xFF16A34A),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -652,72 +582,59 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                       },
                     ),
                     SizedBox(height: 20),
-                    _buildSettingsItem(
+                    _buildEnhancedSettingsItem(
                       'Edit Profile',
                       Icons.person_outline,
-                      Color(0xFF23446C),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Profile editing coming soon!', Color(0xFF23446C));
-                      },
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Profile editing coming soon!'),
                     ),
-                    _buildSettingsItem(
+                    _buildEnhancedSettingsItem(
                       'Notifications',
                       Icons.notifications_outlined,
-                      Color(0xFF24C48E),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Notification settings coming soon!', Color(0xFF24C48E));
-                      },
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Notification settings coming soon!'),
                     ),
-                    _buildSettingsItem(
+                    _buildEnhancedSettingsItem(
                       'Privacy & Security',
                       Icons.security_outlined,
-                      Color(0xFF292942),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Privacy settings coming soon!', Color(0xFF292942));
-                      },
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Privacy settings coming soon!'),
                     ),
-                    _buildSettingsItem(
+                    _buildEnhancedSettingsItem(
                       'Help & Support',
                       Icons.help_outline,
-                      Color(0xFFC0D3DF),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Help & support coming soon!', Color(0xFFC0D3DF));
-                      },
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Help & support coming soon!'),
                     ),
                     SizedBox(height: 20),
                     Container(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
                         onPressed: () => _handleLogout(context),
-                        icon: Icon(Icons.logout, size: 20),
-                        label: Text(
-                          'Logout',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: Color(0xFFDC2626),
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 15),
+                          padding: EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 2,
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Logout',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                     SizedBox(height: 20),
                     Text(
                       'CardioLink v1.0.0',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Color(0xFFC0D3DF),
+                        color: Color(0xFF6B7280),
                       ),
                     ),
                   ],
@@ -730,9 +647,9 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  Widget _buildSettingsItem(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildEnhancedSettingsItem(String title, IconData icon, Color color, VoidCallback onTap) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 8),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -741,12 +658,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
           child: Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              border: Border.all(color: Color(0xFFE5E7EB)),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Color(0xFFEFF9FE),
-                width: 1,
-              ),
             ),
             child: Row(
               children: [
@@ -754,24 +667,24 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                   padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                SizedBox(width: 15),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF292942),
+                      color: Color(0xFF1E1E1E),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: Color(0xFFC0D3DF),
+                  color: Color(0xFF6B7280),
                   size: 16,
                 ),
               ],
@@ -782,7 +695,24 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  void _handleLogout(BuildContext context) async {
+  void _showAwesomeSnackBar(BuildContext context, String message) {
+    final snackBar = SnackBar(
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      content: AwesomeSnackbarContent(
+        title: 'Info',
+        message: message,
+        contentType: ContentType.success,
+      ),
+    );
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
     try {
       bool shouldLogout = await showDialog<bool>(
         context: context,
@@ -793,17 +723,17 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
             ),
             title: Text(
               'Logout',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF292942),
+                color: Color(0xFF1E1E1E),
               ),
             ),
             content: Text(
               'Are you sure you want to logout from your account?',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Color(0xFFC0D3DF),
+                color: Color(0xFF6B7280),
               ),
             ),
             actions: [
@@ -811,8 +741,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                 onPressed: () => Navigator.of(context).pop(false),
                 child: Text(
                   'Cancel',
-                  style: GoogleFonts.poppins(
-                    color: Color(0xFFC0D3DF),
+                  style: GoogleFonts.inter(
+                    color: Color(0xFF6B7280),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -820,7 +750,7 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: Color(0xFFDC2626),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -828,7 +758,7 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                 ),
                 child: Text(
                   'Logout',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -840,32 +770,38 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
 
       if (!shouldLogout) return;
 
-      Navigator.pop(context);
-
+      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
           return Center(
             child: Container(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(
-                    color: Color(0xFF24C48E),
+                  SpinKitFadingCircle(
+                    color: Color(0xFF16A34A),
+                    size: 40.0,
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Logging out...',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF292942),
+                      color: Color(0xFF1E1E1E),
                     ),
                   ),
                 ],
@@ -878,52 +814,54 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       bool logoutSuccess = await authProvider.logout();
 
-      Navigator.pop(context);
+      // Close loading dialog
+      Navigator.of(context).pop();
 
       if (logoutSuccess) {
+        // Navigate to login screen and remove all routes
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => LoginScreen()),
-          (route) => false,
+          (Route<dynamic> route) => false,
         );
         
-        _showSnackBar(context, 'Logged out successfully', Color(0xFF24C48E));
+        _showAwesomeSnackBar(context, 'Logged out successfully');
       } else {
-        _showSnackBar(context, 'Logout failed. Please try again.', Colors.red);
+        final errorSnackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Error',
+            message: 'Logout failed. Please try again.',
+            contentType: ContentType.failure,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
       }
 
     } catch (e) {
       print('Logout error: $e');
-      Navigator.pop(context);
-      _showSnackBar(context, 'An error occurred during logout', Colors.red);
-    }
-  }
-
-  void _showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.poppins(color: Colors.white),
-        ),
-        backgroundColor: color,
+      Navigator.of(context).pop(); // Close loading dialog if open
+      final errorSnackBar = SnackBar(
+        elevation: 0,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Error',
+          message: 'An error occurred during logout',
+          contentType: ContentType.failure,
         ),
-        margin: EdgeInsets.all(16),
-      ),
-    );
+      );
+      ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
+    }
   }
 }
 
 class _AmbulanceMapTab extends StatelessWidget {
   final Map<String, dynamic> requestData;
 
-  const _AmbulanceMapTab({
-    Key? key,
-    required this.requestData,
-  }) : super(key: key);
+  const _AmbulanceMapTab({required this.requestData});
 
   @override
   Widget build(BuildContext context) {
@@ -931,737 +869,668 @@ class _AmbulanceMapTab extends StatelessWidget {
   }
 }
 
-class _AmbulanceEmployerDashboardContent extends StatelessWidget {
-  final Function(Map<String, dynamic>) onViewOnMap;
-
-  const _AmbulanceEmployerDashboardContent({
-    Key? key,
-    required this.onViewOnMap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildQuickStatsGrid(),
-          SizedBox(height: 25),
-          _buildSectionHeader('Active Ambulances', Icons.local_shipping),
-          SizedBox(height: 15),
-          _buildActiveAmbulancesCard(context),
-          SizedBox(height: 25),
-          _buildSectionHeader('Recent Activity', Icons.history),
-          SizedBox(height: 15),
-          _buildRecentActivityList(context),
-          SizedBox(height: 20),
-        ],
+class _EnhancedDashboardHomeContent extends StatelessWidget {
+  void _showEnhancedSettingsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text(
+                    'Settings',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E1E1E),
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Color(0xFF6B7280)),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(0xFFE5E7EB)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFF16A34A),
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      authProvider.userDisplayName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E1E1E),
+                                      ),
+                                    ),
+                                    Text(
+                                      authProvider.userEmail,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFD1FAE5),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Patient',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          color: Color(0xFF16A34A),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    _buildEnhancedSettingsItem(
+                      context,
+                      'Edit Profile',
+                      Icons.person_outline,
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Profile editing coming soon!'),
+                    ),
+                    _buildEnhancedSettingsItem(
+                      context,
+                      'Notifications',
+                      Icons.notifications_outlined,
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Notification settings coming soon!'),
+                    ),
+                    _buildEnhancedSettingsItem(
+                      context,
+                      'Privacy & Security',
+                      Icons.security_outlined,
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Privacy settings coming soon!'),
+                    ),
+                    _buildEnhancedSettingsItem(
+                      context,
+                      'Help & Support',
+                      Icons.help_outline,
+                      Color(0xFF16A34A),
+                      () => _showAwesomeSnackBar(context, 'Help & support coming soon!'),
+                    ),
+                    SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => _handleLogout(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Logout',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'CardioLink v1.0.0',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildQuickStatsGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double spacing = 15;
-        double availableWidth = constraints.maxWidth;
-        double cardWidth = (availableWidth - spacing) / 2;
-        double cardHeight = cardWidth * 0.7;
+  Widget _buildEnhancedSettingsItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1E1E1E),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Color(0xFF6B7280),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
+  void _showAwesomeSnackBar(BuildContext context, String message) {
+    final snackBar = SnackBar(
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      content: AwesomeSnackbarContent(
+        title: 'Info',
+        message: message,
+        contentType: ContentType.success,
+      ),
+    );
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    try {
+      bool shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              'Logout',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E1E1E),
+              ),
+            ),
+            content: Text(
+              'Are you sure you want to logout from your account?',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.inter(
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Logout',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ) ?? false;
+
+      if (!shouldLogout) return;
+
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Center(
+            child: Container(
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SpinKitFadingCircle(
+                    color: Color(0xFF16A34A),
+                    size: 40.0,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Logging out...',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1E1E1E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      bool logoutSuccess = await authProvider.logout();
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (logoutSuccess) {
+        // Navigate to login screen and remove all routes
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+          (Route<dynamic> route) => false,
+        );
+        
+        _showAwesomeSnackBar(context, 'Logged out successfully');
+      } else {
+        final errorSnackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Error',
+            message: 'Logout failed. Please try again.',
+            contentType: ContentType.failure,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
+      }
+
+    } catch (e) {
+      print('Logout error: $e');
+      Navigator.of(context).pop(); // Close loading dialog if open
+      final errorSnackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Error',
+          message: 'An error occurred during logout',
+          contentType: ContentType.failure,
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF5F6FA),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildModernHeader(context),
+                    SizedBox(height: 20),
+                    _buildUserWelcomeCard(context),
+                    SizedBox(height: 24),
+                    _buildQuickStatsGrid(),
+                    SizedBox(height: 24),
+                    _buildHealthDistributionChart(),
+                    SizedBox(height: 24),
+                    _buildHealthMetricsSection(),
+                    SizedBox(height: 24),
+                    _buildAppointmentSection(),
+                    SizedBox(height: 24),
+                    _buildQuickActionsSection(),
+                    SizedBox(height: 20), // Reduced bottom padding
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: _buildStatCard(
-                'Pending Requests',
-                '12',
-                Icons.pending_actions,
-                Color(0xFFFFA726),
-                Color(0xFFFFB74D),
+            Text(
+              'Welcome to',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6B7280),
               ),
             ),
-            SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: _buildStatCard(
-                'Active Rides',
-                '5',
-                Icons.local_shipping,
-                Color(0xFF66BB6A),
-                Color(0xFF81C784),
-              ),
-            ),
-            SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: _buildStatCard(
-                'Completed Today',
-                '23',
-                Icons.check_circle,
-                Color(0xFF42A5F5),
-                Color(0xFF64B5F6),
-              ),
-            ),
-            SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: _buildStatCard(
-                'Total Earnings',
-                '\$1,240',
-                Icons.account_balance_wallet,
-                Color(0xFFAB47BC),
-                Color(0xFFBA68C8),
+            SizedBox(height: 4),
+            Text(
+              'CardioLink',
+              style: GoogleFonts.inter(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E1E1E),
+                letterSpacing: -0.5,
               ),
             ),
           ],
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Color(0xFF16A34A),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showEnhancedSettingsBottomSheet(context),
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(
+                  Icons.settings_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUserWelcomeCard(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return OpenContainer(
+          closedBuilder: (context, action) => Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Color(0xFFE5E7EB)),
+              image: DecorationImage(
+                image: AssetImage('assets/images/patient.png'),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.05),
+                  BlendMode.darken,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF16A34A),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF16A34A).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hello,',
+                        style: GoogleFonts.inter(
+                          color: Color(0xFF6B7280),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        authProvider.userDisplayName,
+                        style: GoogleFonts.inter(
+                          color: Color(0xFF1E1E1E),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFD1FAE5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Patient ID: #CA2024001',
+                          style: GoogleFonts.inter(
+                            color: Color(0xFF16A34A),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          openBuilder: (context, action) => Container(),
         );
       },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color1, Color color2) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color1, color2],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color1.withOpacity(0.3),
-            blurRadius: 15,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white, size: 26),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
+  Widget _buildQuickStatsGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 12, // Reduced spacing
+      mainAxisSpacing: 12, // Reduced spacing
+      childAspectRatio: 1.0, // Adjusted aspect ratio
       children: [
-        Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFFF4757), Color(0xFFFF6B6B)],
-            ),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
-        SizedBox(width: 12),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF292942),
-          ),
-        ),
+        _buildStatCard('Heart Rate', '72', 'BPM', Icons.favorite, Color(0xFFDC2626), true),
+        _buildStatCard('Blood Pressure', '120/80', 'mmHg', Icons.opacity, Color(0xFF16A34A), false),
+        _buildStatCard('Steps Today', '8,542', 'steps', Icons.directions_walk, Color(0xFFF59E0B), false),
+        _buildStatCard('Sleep', '7h 20m', 'last night', Icons.nightlight_round, Color(0xFF8B5CF6), false),
       ],
     );
   }
 
-  Widget _buildActiveAmbulancesCard(BuildContext context) {
+  Widget _buildStatCard(String title, String value, String subtitle, IconData icon, Color color, bool isAnimated) {
     return Container(
-      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: Offset(0, 5),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Color(0xFFE5E7EB)),
       ),
-      child: Column(
-        children: [
-          _buildAmbulanceItem(context, 'AMB-001', 'En Route', 'John Smith', Colors.green, true, {
-            'patientName': 'Sarah Johnson',
-            'emergencyType': 'Heart Attack',
-            'latitude': '33.6844',
-            'longitude': '73.0479',
-            'address': '123 Main St, Islamabad',
-            'timestamp': '5 min ago',
-            'phoneNumber': '+92 300 1234567',
-          }),
-          Divider(height: 30),
-          _buildAmbulanceItem(context, 'AMB-002', 'Available', 'Sarah Johnson', Colors.blue, false, null),
-          Divider(height: 30),
-          _buildAmbulanceItem(context, 'AMB-003', 'En Route', 'Mike Wilson', Colors.green, true, {
-            'patientName': 'Ahmed Khan',
-            'emergencyType': 'Accident',
-            'latitude': '33.7294',
-            'longitude': '73.0931',
-            'address': 'F-7 Markaz, Islamabad',
-            'timestamp': '12 min ago',
-            'phoneNumber': '+92 301 9876543',
-          }),
-          Divider(height: 30),
-          _buildAmbulanceItem(context, 'AMB-004', 'Available', 'Emily Davis', Colors.blue, false, null),
-          Divider(height: 30),
-          _buildAmbulanceItem(context, 'AMB-005', 'Maintenance', 'Robert Brown', Colors.orange, false, null),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAmbulanceItem(
-    BuildContext context,
-    String id,
-    String status,
-    String driver,
-    Color statusColor,
-    bool isEnRoute,
-    Map<String, dynamic>? requestData,
-  ) {
-    return Row(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFFF4757), Color(0xFFFF6B6B)],
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(Icons.local_shipping, color: Colors.white, size: 28),
-        ),
-        SizedBox(width: 15),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                id,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF292942),
-                ),
-              ),
-              Text(
-                driver,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Color(0xFFC0D3DF),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (isEnRoute && requestData != null)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                onViewOnMap(requestData);
-              },
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Color(0xFF23446C).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Color(0xFF23446C).withOpacity(0.3),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: isAnimated
+                      ? _buildPulseIcon(icon, color)
+                      : Icon(icon, color: color, size: 20),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.map,
-                      size: 16,
-                      color: Color(0xFF23446C),
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      'View Map',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF23446C),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
-          ),
-        if (!isEnRoute)
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: statusColor.withOpacity(0.3)),
-            ),
-            child: Text(
-              status,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: statusColor,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildRecentActivityList(BuildContext context) {
-    return Column(
-      children: [
-        _buildActivityCard(
-          context,
-          'Request Accepted',
-          'AMB-001 accepted emergency request from patient #CA2024045',
-          '5 min ago',
-          Icons.check_circle,
-          Colors.green,
-          true,
-          {
-            'patientName': 'Emergency Patient #CA2024045',
-            'emergencyType': 'Emergency Request',
-            'latitude': '33.6844',
-            'longitude': '73.0479',
-            'address': 'Emergency Location, Islamabad',
-            'timestamp': '5 min ago',
-            'phoneNumber': '+92 300 1234567',
-          },
-        ),
-        SizedBox(height: 12),
-        _buildActivityCard(
-          context,
-          'Ride Completed',
-          'AMB-003 successfully completed ride to City Hospital',
-          '15 min ago',
-          Icons.local_hospital,
-          Colors.blue,
-          false,
-          null,
-        ),
-        SizedBox(height: 12),
-        _buildActivityCard(
-          context,
-          'Request Declined',
-          'AMB-002 declined request - ambulance unavailable',
-          '32 min ago',
-          Icons.cancel,
-          Colors.orange,
-          false,
-          null,
-        ),
-        SizedBox(height: 12),
-        _buildActivityCard(
-          context,
-          'Payment Received',
-          'Payment of \$85 received for ride #R2024089',
-          '1 hour ago',
-          Icons.payment,
-          Colors.purple,
-          false,
-          null,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActivityCard(
-    BuildContext context,
-    String title,
-    String description,
-    String time,
-    IconData icon,
-    Color color,
-    bool showMapButton,
-    Map<String, dynamic>? requestData,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Color(0xFFEFF9FE)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          SizedBox(width: 15),
-          Expanded(
-            child: Column(
+            SizedBox(height: 8),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E1E1E),
+                  ),
+                ),
+                SizedBox(height: 4),
                 Text(
                   title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF292942),
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  description,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Color(0xFFC0D3DF),
-                  ),
-                ),
-                SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      time,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Color(0xFFC0D3DF),
-                      ),
-                    ),
-                    if (showMapButton && requestData != null) ...[
-                      SizedBox(width: 10),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            onViewOnMap(requestData);
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Color(0xFF23446C).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.map,
-                                  size: 12,
-                                  color: Color(0xFF23446C),
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'View',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF23446C),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashboardHomeContent extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFEFF9FE),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: EdgeInsets.only(bottom: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'CardioLink',
-                      style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF292942),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => _showSettingsBottomSheet(context),
-                      borderRadius: BorderRadius.circular(25),
-                      child: Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF23446C).withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.settings_outlined,
-                          color: Color(0xFF23446C),
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildUserProfileCard(context),
-              SizedBox(height: 25),
-              _buildHealthStatsRow(),
-              SizedBox(height: 20),
-              _buildAppointmentCard(),
-              SizedBox(height: 20),
-              _buildRecentRecordsSection(),
-              SizedBox(height: 20),
-              _buildQuickActionsSection(),
-              SizedBox(height: 80),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserProfileCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF23446C), Color(0xFF2D5585)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF23446C).withOpacity(0.3),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Hero(
-            tag: 'profile-avatar',
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Color(0xFF24C48E),
-                  width: 3,
-                ),
-              ),
-              child: CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.white,
-                backgroundImage: NetworkImage(
-                  'https://images.unsplash.com/photo-1603415526960-f8f62b36c9a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome Back!',
-                  style: GoogleFonts.poppins(
-                    color: Color(0xFFC0D3DF),
-                    fontSize: 14,
-                  ),
-                ),
-                Consumer<AuthProvider>(
-                  builder: (context, authProvider, child) {
-                    String userName = 'Guest User';
-                    
-                    if (authProvider.currentUser != null) {
-                      userName = authProvider.currentUser!['name']?.toString() ?? 'Guest User';
-                    }
-                    
-                    return Text(
-                      userName,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  },
-                ),
-                Text(
-                  'Patient ID: #CA2024001',
-                  style: GoogleFonts.poppins(
-                    color: Color(0xFF24C48E),
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF6B7280),
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Color(0xFF24C48E).withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Badge(
-              smallSize: 8,
-              backgroundColor: Color(0xFF24C48E),
-              child: Icon(
-                Icons.notifications_outlined,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHealthStatsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildHealthCard(
-            'Heart Rate',
-            '72 BPM',
-            Icons.favorite,
-            Color(0xFF24C48E),
-            isAnimated: true,
-          ),
+          ],
         ),
-        SizedBox(width: 15),
-        Expanded(
-          child: _buildHealthCard(
-            'Blood Pressure',
-            '120/80',
-            Icons.opacity,
-            Color(0xFF23446C),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHealthCard(String title, String value, IconData icon, Color color, {bool isAnimated = false}) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 15,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: isAnimated
-                ? _buildPulseIcon(icon, color)
-                : Icon(icon, color: color, size: 24),
-          ),
-          SizedBox(height: 15),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF292942),
-            ),
-          ),
-          SizedBox(height: 5),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Color(0xFFC0D3DF),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1674,188 +1543,297 @@ class _DashboardHomeContent extends StatelessWidget {
       builder: (context, value, child) {
         return Transform.scale(
           scale: value,
-          child: Icon(icon, color: color, size: 24),
+          child: Icon(icon, color: color, size: 20),
         );
       },
-      onEnd: () {},
     );
   }
 
-  Widget _buildAppointmentCard() {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF23446C).withOpacity(0.08),
-            blurRadius: 20,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF24C48E), Color(0xFF1FA876)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.calendar_today,
-                  color: Colors.white,
-                  size: 20),
-              ),
-              SizedBox(width: 12),
-              Text(
-                'Next Appointment',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF292942),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 15),
-          Container(
-            padding: EdgeInsets.all(15),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFFEFF9FE),
-                  Color(0xFFF5FBFF),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(
-                color: Color(0xFF24C48E).withOpacity(0.2),
-                width: 1.5,
-              ),
-            ),
-            child: InkWell(
-              onTap: () {},
-              borderRadius: BorderRadius.circular(15),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Color(0xFF24C48E),
-                        width: 2,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Colors.white,
-                      backgroundImage: NetworkImage(
-                        'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dr. Sarah Wilson',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF292942),
-                          ),
-                        ),
-                        Text(
-                          'Cardiologist',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Color(0xFFC0D3DF),
-                          ),
-                        ),
-                        SizedBox(height: 5),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF24C48E).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Tomorrow, 10:30 AM',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Color(0xFF24C48E),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF23446C).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.arrow_forward_ios,
-                      color: Color(0xFF23446C),
-                      size: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentRecordsSection() {
+  Widget _buildHealthDistributionChart() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recent Records',
-          style: GoogleFonts.poppins(
+          'Health Distribution',
+          style: GoogleFonts.inter(
             fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF292942),
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E1E1E),
           ),
         ),
-        SizedBox(height: 15),
-        _buildRecordCard(
-          'ECG Test Results',
-          'Normal sinus rhythm detected',
-          'May 20, 2024',
-          Icons.monitor_heart,
-          Color(0xFF24C48E),
+        SizedBox(height: 16),
+        Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                height: 180, // Reduced height
+                child: SfCircularChart(
+                  palette: [
+                    Color(0xFF16A34A),
+                    Color(0xFF22C55E),
+                    Color(0xFFF59E0B),
+                    Color(0xFFEF4444),
+                  ],
+                  series: <CircularSeries>[
+                    DoughnutSeries<ChartData, String>(
+                      dataSource: [
+                        ChartData('Exercise', 35, Color(0xFF16A34A)),
+                        ChartData('Sleep', 25, Color(0xFF22C55E)),
+                        ChartData('Nutrition', 20, Color(0xFFF59E0B)),
+                        ChartData('Medication', 20, Color(0xFFEF4444)),
+                      ],
+                      xValueMapper: (ChartData data, _) => data.category,
+                      yValueMapper: (ChartData data, _) => data.value,
+                      pointColorMapper: (ChartData data, _) => data.color,
+                      dataLabelMapper: (ChartData data, _) => '${data.value}%',
+                      dataLabelSettings: DataLabelSettings(
+                        isVisible: true,
+                        labelPosition: ChartDataLabelPosition.outside,
+                        textStyle: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E1E1E),
+                        ),
+                      ),
+                      innerRadius: '60%',
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12),
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  _buildChartLegend('Exercise', Color(0xFF16A34A)),
+                  _buildChartLegend('Sleep', Color(0xFF22C55E)),
+                  _buildChartLegend('Nutrition', Color(0xFFF59E0B)),
+                  _buildChartLegend('Medication', Color(0xFFEF4444)),
+                ],
+              ),
+            ],
+          ),
         ),
-        SizedBox(height: 10),
-        _buildRecordCard(
-          'Blood Test Report',
-          'Cholesterol levels within normal range',
-          'May 18, 2024',
-          Icons.bloodtype,
-          Color(0xFF23446C),
+      ],
+    );
+  }
+
+  Widget _buildHealthMetricsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Weekly Activity',
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E1E1E),
+          ),
         ),
-        SizedBox(height: 10),
-        _buildRecordCard(
-          'Medication Reminder',
-          'Lisinopril 10mg - Take with breakfast',
-          'Daily',
-          Icons.medication,
-          Color(0xFF292942),
+        SizedBox(height: 16),
+        Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 180, // Reduced height
+                child: SfCartesianChart(
+                  plotAreaBorderWidth: 0,
+                  primaryXAxis: CategoryAxis(
+                    majorGridLines: MajorGridLines(width: 0),
+                    axisLine: AxisLine(width: 0),
+                    labelStyle: GoogleFonts.inter(
+                      color: Color(0xFF6B7280),
+                      fontSize: 10,
+                    ),
+                  ),
+                  primaryYAxis: NumericAxis(
+                    majorGridLines: MajorGridLines(
+                      color: Color(0xFFE5E7EB),
+                      width: 1,
+                    ),
+                    axisLine: AxisLine(width: 0),
+                    labelStyle: GoogleFonts.inter(
+                      color: Color(0xFF6B7280),
+                      fontSize: 10,
+                    ),
+                  ),
+                  series: <CartesianSeries>[
+                    ColumnSeries<ChartData, String>(
+                      dataSource: [
+                        ChartData('Mon', 40, Color(0xFF16A34A)),
+                        ChartData('Tue', 70, Color(0xFF16A34A)),
+                        ChartData('Wed', 60, Color(0xFF16A34A)),
+                        ChartData('Thu', 85, Color(0xFF16A34A)),
+                        ChartData('Fri', 55, Color(0xFF16A34A)),
+                        ChartData('Sat', 90, Color(0xFF16A34A)),
+                        ChartData('Sun', 65, Color(0xFF16A34A)),
+                      ],
+                      xValueMapper: (ChartData data, _) => data.category,
+                      yValueMapper: (ChartData data, _) => data.value,
+                      color: Color(0xFF22C55E),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
+                      ),
+                      dataLabelSettings: DataLabelSettings(
+                        isVisible: true,
+                        textStyle: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E1E1E),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChartLegend(String text, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        SizedBox(width: 6),
+        Text(
+          text,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppointmentSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Next Appointment',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E1E1E),
+              ),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: Text(
+                'View All',
+                style: GoogleFonts.inter(
+                  color: Color(0xFF16A34A),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF16A34A),
+                ),
+                child: Icon(
+                  Icons.medical_services,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dr. Sarah Wilson',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E1E1E),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Cardiologist',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.access_time, color: Color(0xFF16A34A), size: 14),
+                          SizedBox(width: 6),
+                          Text(
+                            'Tomorrow, 10:30 AM',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Color(0xFF16A34A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -1867,185 +1845,65 @@ class _DashboardHomeContent extends StatelessWidget {
       children: [
         Text(
           'Quick Actions',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.inter(
             fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF292942),
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E1E1E),
           ),
         ),
-        SizedBox(height: 15),
-        Row(
+        SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          crossAxisCount: 4,
+          crossAxisSpacing: 8, // Reduced spacing
+          mainAxisSpacing: 8, // Reduced spacing
+          childAspectRatio: 0.8, // Adjusted aspect ratio for better fit
           children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                'Emergency Call',
-                Icons.phone,
-                Colors.red,
-              ),
-            ),
-            SizedBox(width: 15),
-            Expanded(
-              child: _buildQuickActionCard(
-                'Find Pharmacy',
-                Icons.local_pharmacy,
-                Color(0xFF24C48E),
-              ),
-            ),
-            SizedBox(width: 15),
-            Expanded(
-              child: _buildQuickActionCard(
-                'Video Consult',
-                Icons.video_call,
-                Color(0xFF23446C),
-              ),
-            ),
+            _buildQuickAction(Icons.emergency, 'Emergency', Color(0xFFDC2626)),
+            _buildQuickAction(Icons.video_call, 'Video Call', Color(0xFF16A34A)),
+            _buildQuickAction(Icons.local_pharmacy, 'Pharmacy', Color(0xFF2563EB)),
+            _buildQuickAction(Icons.local_hospital, 'Ambulance', Color(0xFFF59E0B)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildRecordCard(String title, String subtitle, String date, IconData icon, Color color) {
+  Widget _buildQuickAction(IconData icon, String label, Color color) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         onTap: () {},
         child: Container(
-          padding: EdgeInsets.all(15),
+          padding: EdgeInsets.all(8), // Reduced padding
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.08),
-                blurRadius: 15,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withOpacity(0.1),
-                      color.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF292942),
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Color(0xFFC0D3DF),
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        date,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: color,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Color(0xFFEFF9FE),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF23446C),
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard(String title, IconData icon, Color color) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: () {},
-        child: Container(
-          padding: EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.08),
-                blurRadius: 15,
-                offset: Offset(0, 3),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Color(0xFFE5E7EB)),
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(14),
+                padding: EdgeInsets.all(6), // Reduced padding
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withOpacity(0.15),
-                      color.withOpacity(0.08),
-                    ],
-                  ),
+                  color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 26),
+                child: Icon(icon, color: color, size: 18), // Reduced icon size
               ),
-              SizedBox(height: 12),
+              SizedBox(height: 6), // Reduced spacing
               Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 9, // Reduced font size
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF292942),
+                  color: color,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
               ),
             ],
           ),
@@ -2053,393 +1911,256 @@ class _DashboardHomeContent extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _showSettingsBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(25),
-            topRight: Radius.circular(25),
+class ChartData {
+  final String category;
+  final int value;
+  final Color color;
+
+  ChartData(this.category, this.value, this.color);
+}
+
+class _EnhancedAmbulanceEmployerDashboardContent extends StatelessWidget {
+  final Function(Map<String, dynamic>) onViewOnMap;
+
+  const _EnhancedAmbulanceEmployerDashboardContent({required this.onViewOnMap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildStatsOverview(),
+          SizedBox(height: 24),
+          _buildActiveAmbulances(),
+          SizedBox(height: 24),
+          _buildRecentRequests(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsOverview() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.1,
+      children: [
+        AnimatedStatCard(
+          title: 'Active Rides',
+          value: '5',
+          subtitle: 'ongoing',
+          icon: Icons.local_shipping,
+          color: Color(0xFF16A34A),
+        ),
+        AnimatedStatCard(
+          title: 'Pending',
+          value: '12',
+          subtitle: 'requests',
+          icon: Icons.pending_actions,
+          color: Color(0xFFF59E0B),
+        ),
+        AnimatedStatCard(
+          title: 'Completed',
+          value: '23',
+          subtitle: 'today',
+          icon: Icons.check_circle,
+          color: Color(0xFF2563EB),
+        ),
+        AnimatedStatCard(
+          title: 'Revenue',
+          value: '\$1,240',
+          subtitle: 'this week',
+          icon: Icons.attach_money,
+          color: Color(0xFF8B5CF6),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveAmbulances() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Active Ambulances',
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E1E1E),
           ),
         ),
-        child: Column(
+        SizedBox(height: 16),
+        ..._buildAmbulanceList(),
+      ],
+    );
+  }
+
+  List<Widget> _buildAmbulanceList() {
+    final ambulances = [
+      {'id': 'AMB-001', 'status': 'En Route', 'driver': 'John Smith', 'color': Color(0xFF16A34A)},
+      {'id': 'AMB-002', 'status': 'Available', 'driver': 'Sarah Wilson', 'color': Color(0xFF2563EB)},
+      {'id': 'AMB-003', 'status': 'En Route', 'driver': 'Mike Johnson', 'color': Color(0xFF16A34A)},
+    ];
+
+    return ambulances.map((ambulance) {
+      return Container(
+        margin: EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Color(0xFFE5E7EB)),
+        ),
+        child: Row(
           children: [
             Container(
-              width: 40,
-              height: 4,
-              margin: EdgeInsets.symmetric(vertical: 15),
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
-                color: Color(0xFFC0D3DF),
-                borderRadius: BorderRadius.circular(2),
+                color: ambulance['color'] as Color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.local_shipping,
+                color: Colors.white,
+                size: 24,
               ),
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Settings',
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
+                    ambulance['id'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF292942),
+                      color: Color(0xFF1E1E1E),
                     ),
                   ),
-                  Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: Color(0xFFC0D3DF)),
+                  Text(
+                    ambulance['driver'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
                 ],
               ),
             ),
-            Divider(height: 1, color: Color(0xFFEFF9FE)),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, child) {
-                        return Container(
-                          padding: EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF23446C), Color(0xFF2A5380)],
-                            ),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Color(0xFF24C48E),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: CircleAvatar(
-                                  radius: 25,
-                                  backgroundColor: Colors.white,
-                                  child: Icon(
-                                    Icons.person,
-                                    color: Color(0xFF23446C),
-                                    size: 28,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 15),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      authProvider.userDisplayName,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    Text(
-                                      authProvider.userEmail,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
-                                    ),
-                                    Text(
-                                      authProvider.isAmbulanceEmployer ? 'Ambulance Employer' : 'Patient',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Color(0xFF24C48E),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 20),
-                    _buildSettingsItem(
-                      context,
-                      'Edit Profile',
-                      Icons.person_outline,
-                      Color(0xFF23446C),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Profile editing coming soon!', Color(0xFF23446C));
-                      },
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      'Notifications',
-                      Icons.notifications_outlined,
-                      Color(0xFF24C48E),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Notification settings coming soon!', Color(0xFF24C48E));
-                      },
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      'Privacy & Security',
-                      Icons.security_outlined,
-                      Color(0xFF292942),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Privacy settings coming soon!', Color(0xFF292942));
-                      },
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      'Help & Support',
-                      Icons.help_outline,
-                      Color(0xFFC0D3DF),
-                      () {
-                        Navigator.pop(context);
-                        _showSnackBar(context, 'Help & support coming soon!', Color(0xFFC0D3DF));
-                      },
-                    ),
-                    SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _handleLogout(context),
-                        icon: Icon(Icons.logout, size: 20),
-                        label: Text(
-                          'Logout',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      'CardioLink v1.0.0',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Color(0xFFC0D3DF),
-                      ),
-                    ),
-                  ],
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: (ambulance['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                ambulance['status'] as String,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: ambulance['color'] as Color,
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
+      );
+    }).toList();
   }
 
-  Widget _buildSettingsItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Color(0xFFEFF9FE),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-                SizedBox(width: 15),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF292942),
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Color(0xFFC0D3DF),
-                  size: 16,
-                ),
-              ],
-            ),
+  Widget _buildRecentRequests() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recent Requests',
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E1E1E),
           ),
         ),
-      ),
+        SizedBox(height: 16),
+        ..._buildRequestList(),
+      ],
     );
   }
 
-  void _handleLogout(BuildContext context) async {
-    try {
-      bool shouldLogout = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(
-              'Logout',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF292942),
-              ),
-            ),
-            content: Text(
-              'Are you sure you want to logout from your account?',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Color(0xFFC0D3DF),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.poppins(
-                    color: Color(0xFFC0D3DF),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Logout',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ) ?? false;
+  List<Widget> _buildRequestList() {
+    final requests = [
+      {'patient': 'Sarah Johnson', 'type': 'Heart Attack', 'time': '5 min ago'},
+      {'patient': 'Mike Wilson', 'type': 'Accident', 'time': '12 min ago'},
+      {'patient': 'Emily Davis', 'type': 'Emergency', 'time': '20 min ago'},
+    ];
 
-      if (!shouldLogout) return;
-
-      Navigator.pop(context);
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return Center(
-            child: Container(
-              padding: EdgeInsets.all(20),
+    return requests.map((request) {
+      return Container(
+        margin: EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                shape: BoxShape.circle,
+                color: Color(0xFF16A34A),
               ),
+              child: Icon(
+                Icons.person,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircularProgressIndicator(
-                    color: Color(0xFF24C48E),
-                  ),
-                  SizedBox(height: 16),
                   Text(
-                    'Logging out...',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
+                    request['patient'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E1E1E),
+                    ),
+                  ),
+                  Text(
+                    request['type'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF292942),
+                      color: Color(0xFF6B7280),
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        },
+            Text(
+              request['time'] as String,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
       );
-
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      bool logoutSuccess = await authProvider.logout();
-
-      Navigator.pop(context);
-
-      if (logoutSuccess) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-          (route) => false,
-        );
-        
-        _showSnackBar(context, 'Logged out successfully', Color(0xFF24C48E));
-      } else {
-        _showSnackBar(context, 'Logout failed. Please try again.', Colors.red);
-      }
-
-    } catch (e) {
-      print('Logout error: $e');
-      Navigator.pop(context);
-      _showSnackBar(context, 'An error occurred during logout', Colors.red);
-    }
-  }
-
-  void _showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        margin: EdgeInsets.all(16),
-      ),
-    );
+    }).toList();
   }
 }

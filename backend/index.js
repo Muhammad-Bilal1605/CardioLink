@@ -18,6 +18,7 @@ import { connectDB } from "./db/connectDB.js";
 
 // Import auth routes (ES6 module)
 import authRoutes from "./routes/auth.route.js";
+import appointmentsRoutes from "./routes/appointmentsRoutes.js";
 
 dotenv.config();
 
@@ -172,6 +173,9 @@ app.use('/Backend/uploads', express.static(path.join(__dirname, 'uploads')));
 // API Routes
 app.use("/api/auth", authRoutes);
 
+ // Or wherever your routes are
+
+
 // Health check endpoint for Socket.IO
 app.get('/health', (req, res) => {
   res.json({ 
@@ -181,6 +185,8 @@ app.get('/health', (req, res) => {
     socketIOEnabled: true
   });
 });
+
+app.use("/api/appointments", appointmentsRoutes);
 
 // ========== AGORA TOKEN GENERATION ENDPOINT ==========
 // Agora Token Generation

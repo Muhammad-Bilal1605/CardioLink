@@ -1,3 +1,5 @@
+
+//verifyToken.js
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import Patient from "../models/User.js"; // Patient model
