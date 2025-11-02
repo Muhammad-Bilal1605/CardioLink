@@ -1068,6 +1068,7 @@ const networkIP = getNetworkIP();
 // CORS Configuration - Enhanced for Flutter integration
 const allowedOrigins = [
   // Localhost variations
+  'http://10.113.76.183:5001',
   'http://localhost:3000', 
   'http://localhost:5173', 
   'http://localhost:5174',

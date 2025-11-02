@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:expansetracker/provider/auth_provider.dart';
+import '../screens/heartwise_chat.dart';
 import 'dashboard_components.dart';
 import 'dashboard_charts.dart';
 
@@ -476,6 +477,9 @@ class EnhancedDashboardHomeContent extends StatelessWidget {
           ),
         ),
         SizedBox(height: 16),
+        // Prominent HeartWise AI Card
+        _buildHeartWiseAICard(),
+        SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
@@ -483,22 +487,117 @@ class EnhancedDashboardHomeContent extends StatelessWidget {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           children: [
-            _buildQuickAction(Icons.emergency, 'Emergency', Color(0xFFEF4444)),
-            _buildQuickAction(Icons.video_call, 'Video Call', Color(0xFF10B981)),
-            _buildQuickAction(Icons.local_pharmacy, 'Pharmacy', Color(0xFF3B82F6)),
-            _buildQuickAction(Icons.local_hospital, 'Ambulance', Color(0xFFF59E0B)),
+            _buildQuickAction(Icons.emergency, 'Emergency', Color(0xFFEF4444), null),
+            _buildQuickAction(Icons.video_call, 'Video Call', Color(0xFF10B981), null),
+            _buildQuickAction(Icons.local_pharmacy, 'Pharmacy', Color(0xFF3B82F6), null),
+            _buildQuickAction(Icons.local_hospital, 'Ambulance', Color(0xFFF59E0B), null),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildQuickAction(IconData icon, String label, Color color) {
+  Widget _buildHeartWiseAICard() {
+    return Builder(
+      builder: (BuildContext context) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MedicalChatScreen()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFF6B9D), Color(0xFFFF4081)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFFFF4081).withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.favorite,
+                      color: Colors.white,
+                      size: 36,
+                    ),
+                  ),
+                  SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'HeartWise AI',
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Ask your cardiac health assistant',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withOpacity(0.95),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildQuickAction(IconData icon, String label, Color color, VoidCallback? onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {},
+        onTap: onTap ?? () {},
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(

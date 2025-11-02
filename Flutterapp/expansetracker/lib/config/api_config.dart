@@ -8,6 +8,7 @@ class ApiConfig {
   
   // Construct the base URL dynamically
   static String get baseUrl => 'http://$ip:$port/api';
+ 
   
   // Timeout configurations
   static const Duration connectTimeout = Duration(seconds: 30);
@@ -22,4 +23,4 @@ class ApiConfig {
     print('Base URL: $baseUrl');
     print('======================================');
   }
-}
+} 
