@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../provider/auth_provider.dart';
 import 'login_screen.dart';
+import 'dashboard_home.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,35 +50,56 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    // Navigate to login screen after 4 seconds
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const LoginScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              var curve = Curves.easeInOutQuart;
-              var curvedAnimation = CurvedAnimation(
-                parent: animation,
-                curve: curve,
-              );
+    // Check for saved authentication and navigate accordingly
+    _checkAuthAndNavigate();
+  }
 
-              return FadeTransition(
-                opacity: curvedAnimation,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.95, end: 1.0)
-                      .animate(curvedAnimation),
-                  child: child,
-                ),
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 1000),
-          ),
-        );
-      }
-    });
+  Future<void> _checkAuthAndNavigate() async {
+    // Wait for animation to complete
+    await Future.delayed(const Duration(seconds: 3));
+    
+    if (!mounted) return;
+
+    // Check for saved authentication
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final hasAuth = await authProvider.loadSavedAuth();
+
+    if (!mounted) return;
+
+    // Navigate based on authentication state
+    Widget destinationScreen = const LoginScreen();
+    
+    if (hasAuth && authProvider.isAuthenticated) {
+      print('✅ Auto-login successful, navigating to dashboard');
+      destinationScreen = DashboardHome();
+    } else {
+      print('ℹ️ No saved authentication, navigating to login');
+    }
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            destinationScreen,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          var curve = Curves.easeInOutQuart;
+          var curvedAnimation = CurvedAnimation(
+            parent: animation,
+            curve: curve,
+          );
+
+          return FadeTransition(
+            opacity: curvedAnimation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1.0)
+                  .animate(curvedAnimation),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 1000),
+      ),
+    );
   }
 
   @override

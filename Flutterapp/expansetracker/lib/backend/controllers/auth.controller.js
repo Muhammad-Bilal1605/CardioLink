@@ -151,16 +151,17 @@ export const login = async (req, res) => {
 				return res.status(400).json({ success: false, message: "Invalid credentials" });
 			}
 			// Generate token and set cookie
-			generateTokenAndSetCookie(res, patient._id);
+			const token = generateTokenAndSetCookie(res, patient._id);
 
 			// Update last login date
 			patient.lastLogin = new Date();
 			await patient.save();
 
-			// Return the success response with the patient data excluding the password
+			// Return the success response with the patient data and token (for mobile apps)
 			res.status(200).json({
 				success: true,
 				message: "Logged in successfully",
+				token: token,
 				user: {
 					...patient._doc,
 					password: undefined,
@@ -186,16 +187,17 @@ export const login = async (req, res) => {
 		}
 
 		// Generate token and set cookie
-		generateTokenAndSetCookie(res, user._id);
+		const token = generateTokenAndSetCookie(res, user._id);
 
 		// Update last login date
 		user.lastLogin = new Date();
 		await user.save();
 
-		// Return the success response with the user data excluding the password
+		// Return the success response with the user data and token (for mobile apps)
 		res.status(200).json({
 			success: true,
 			message: "Logged in successfully",
+			token: token,
 			user: {
 				...user._doc,
 				password: undefined,
@@ -323,16 +325,17 @@ export const hospitalAdminLogin = async (req, res) => {
 		}
 
 		// Generate token and set cookie
-		generateTokenAndSetCookie(res, hospitalAdmin._id);
+		const token = generateTokenAndSetCookie(res, hospitalAdmin._id);
 
 		// Update last login date
 		hospitalAdmin.lastLogin = new Date();
 		await hospitalAdmin.save();
 
-		// Return the success response
+		// Return the success response with token (for mobile apps)
 		res.status(200).json({
 			success: true,
 			message: "Logged in successfully",
+			token: token,
 			user: {
 				...hospitalAdmin._doc,
 				password: undefined,

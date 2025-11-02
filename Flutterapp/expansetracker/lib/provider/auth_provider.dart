@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/config_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -10,6 +11,7 @@ class AuthProvider with ChangeNotifier {
   Map<String, dynamic>? _currentUser;
   String? _userType; // 'patient' or 'ambulance_employer'
   String? _authToken;
+  bool _isInitialized = false;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -17,7 +19,8 @@ class AuthProvider with ChangeNotifier {
   Map<String, dynamic>? get currentUser => _currentUser;
   String? get userType => _userType;
   String? get authToken => _authToken;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => _currentUser != null && _authToken != null;
+  bool get isInitialized => _isInitialized;
 
   // Get base URL from config service (synchronous for compatibility)
   String get baseUrl => ConfigService.instance.baseUrl;
@@ -55,12 +58,79 @@ class AuthProvider with ChangeNotifier {
   }
 
   // Clear all authentication data
-  void clearAuth() {
+  Future<void> clearAuth() async {
     _currentUser = null;
     _userType = null;
     _authToken = null;
     _errorMessage = null;
+    
+    // Clear from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('user_data');
+      await prefs.remove('user_type');
+      print('✅ Auth data cleared from SharedPreferences');
+    } catch (e) {
+      print('❌ Error clearing SharedPreferences: $e');
+    }
+    
     notifyListeners();
+  }
+
+  // Save authentication data to SharedPreferences
+  Future<void> _saveAuthData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_authToken != null) {
+        await prefs.setString('auth_token', _authToken!);
+      }
+      if (_currentUser != null) {
+        await prefs.setString('user_data', json.encode(_currentUser));
+      }
+      if (_userType != null) {
+        await prefs.setString('user_type', _userType!);
+      }
+      print('✅ Auth data saved to SharedPreferences');
+    } catch (e) {
+      print('❌ Error saving to SharedPreferences: $e');
+    }
+  }
+
+  // Load authentication data from SharedPreferences
+  Future<bool> loadSavedAuth() async {
+    try {
+      _setLoading(true);
+      final prefs = await SharedPreferences.getInstance();
+      
+      final savedToken = prefs.getString('auth_token');
+      final savedUserData = prefs.getString('user_data');
+      final savedUserType = prefs.getString('user_type');
+      
+      if (savedToken != null && savedUserData != null && savedUserType != null) {
+        _authToken = savedToken;
+        _currentUser = json.decode(savedUserData);
+        _userType = savedUserType;
+        
+        print('✅ Loaded saved auth data:');
+        print('   User type: $_userType');
+        print('   Token: ${_authToken?.substring(0, 20)}...');
+        
+        _isInitialized = true;
+        notifyListeners();
+        return true;
+      }
+      
+      print('ℹ️ No saved auth data found');
+      _isInitialized = true;
+      return false;
+    } catch (e) {
+      print('❌ Error loading saved auth: $e');
+      _isInitialized = true;
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   // PATIENT SIGNUP - Using same API as web frontend
@@ -324,6 +394,9 @@ class AuthProvider with ChangeNotifier {
           _userType = 'patient';
           _authToken = responseData['token'];
         
+          // Save to SharedPreferences
+          await _saveAuthData();
+          
           print('Patient login successful');
           
           notifyListeners();
@@ -378,6 +451,9 @@ Future<bool> ambulanceEmployerLogin({
       _currentUser = responseData['user'] ?? responseData['employer'];
       _userType = 'ambulance_employer';
       _authToken = responseData['token'];
+      
+      // Save to SharedPreferences
+      await _saveAuthData();
       
       print('Ambulance employer login successful');
       print('User data: $_currentUser');
@@ -435,7 +511,7 @@ Future<bool> ambulanceEmployerLogin({
       print('Logout response status: ${response.statusCode}');
 
       // Clear local state regardless of response
-      clearAuth();
+      await clearAuth();
       
       print('User logged out successfully');
       return true;
@@ -444,7 +520,7 @@ Future<bool> ambulanceEmployerLogin({
       _setError('Logout error: ${e.toString()}');
       
       // Still clear local state even if network request fails
-      clearAuth();
+      await clearAuth();
       
       return false;
     } finally {
