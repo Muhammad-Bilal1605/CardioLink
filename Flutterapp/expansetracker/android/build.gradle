@@ -6,9 +6,8 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'  // Downgrade to avoid namespace issues
+        // Android Gradle Plugin version is now managed in settings.gradle
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        // DO NOT add flutter-gradle-plugin here
     }
 }
 
