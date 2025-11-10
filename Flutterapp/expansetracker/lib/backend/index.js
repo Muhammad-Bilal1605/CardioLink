@@ -1014,6 +1014,8 @@ import messageRoutes from "./routes/message.routes.js";
 import ambulanceRequestRoutes from "./routes/ambulanceRequestRoutes.js";
 import { Message } from "./models/message.model.js";
 
+import cartRoutes from "./routes/cartRoutes.js";
+
 // Import medical routes for EHR
 import visitRoutes from "./routes/visitRoutes.js";
 import hospitalizationRoutes from "./routes/hospitalizationRoutes.js";
@@ -1022,6 +1024,14 @@ import labResultRoutes from "./routes/labResultRoutes.js";
 import imagingRoutes from "./routes/imagingRoutes.js";
 import medicationRoutes from "./routes/medicationRoutes.js";
 import vitalSignRoutes from "./routes/vitalSignRoutes.js";
+
+// Import pharmacy and product routes
+import inventoryRoutes from "./routes/inventoryRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import pharmacyRoutes from "./routes/pharmacyRoutes.js";
+import prescriptionRoutes from "./routes/prescriptionRoutes.js";
+import productCategoryRoutes from "./routes/productCategoryRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
 
 // Import models for debug routes
 import { AmbulanceEmployer } from "./models/ambulanceEmployer.model.js";
@@ -1416,6 +1426,7 @@ app.use("/api/ambulance-requests", ambulanceRequestRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Medical routes for EHR overview
 app.use("/api/visits", visitRoutes);
@@ -1425,6 +1436,14 @@ app.use("/api/lab-results", labResultRoutes);
 app.use("/api/imaging", imagingRoutes);
 app.use("/api/medications", medicationRoutes);
 app.use("/api/vital-signs", vitalSignRoutes);
+
+// Pharmacy and product routes
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/pharmacies", pharmacyRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/product-categories", productCategoryRoutes);
+app.use("/api/products", productRoutes);
 
 // ===== DEBUG ROUTES =====
 
@@ -1575,6 +1594,14 @@ app.get('/api/health', (req, res) => {
       imaging: '/api/imaging',
       medications: '/api/medications',
       vitalSigns: '/api/vital-signs',
+      
+      // Pharmacy and product endpoints
+      inventory: '/api/inventory',
+      orders: '/api/orders',
+      pharmacies: '/api/pharmacies',
+      prescriptions: '/api/prescriptions',
+      productCategories: '/api/product-categories',
+      products: '/api/products',
       
       // Debug endpoints
       testAmbulanceEmployer: '/api/debug/test-ambulance-employer',
@@ -2055,6 +2082,13 @@ async function startServer() {
       console.log(`   • Imaging:          /api/imaging/*`);
       console.log(`   • Medications:      /api/medications/*`);
       console.log(`   • Vital Signs:      /api/vital-signs/*`);
+      console.log(`\n💊 Pharmacy & Product Endpoints:`);
+      console.log(`   • Inventory:        /api/inventory/*`);
+      console.log(`   • Orders:          /api/orders/*`);
+      console.log(`   • Pharmacies:      /api/pharmacies/*`);
+      console.log(`   • Prescriptions:   /api/prescriptions/*`);
+      console.log(`   • Product Categories: /api/product-categories/*`);
+      console.log(`   • Products:        /api/products/*`);
       console.log(`\n🏥 Legacy Endpoints (still supported):`);
       console.log(`   • Patient:  /api/patient/*`);
       console.log(`   • Doctors:  /api/doctors/*`);
