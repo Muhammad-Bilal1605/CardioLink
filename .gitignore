@@ -24,3 +24,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ML Models and Python APIs
+backendheartbeat/
+ECG/
+Heartbeat/
+python_api/
+best_enhanced_echonet_model.pth
