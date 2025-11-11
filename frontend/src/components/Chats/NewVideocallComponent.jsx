@@ -7,7 +7,7 @@ import PrescriptionComponent from '../Prescription/PrescriptionComponent';
 import './NewVideocallComponent.css';
 
 const APP_ID = '88a403916325401a8e5f04beff756692';
-const BASE_URL = 'http://localhost:5001/api/videocall';
+const BASE_URL = 'http://localhost:5000/api/videocall';
 
 const NewVideocallComponent = () => {
   const navigate = useNavigate();

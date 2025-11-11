@@ -9,6 +9,7 @@ const HeartbeatAnalyzer = () => {
   const [processingStage, setProcessingStage] = useState('idle'); // idle, uploading, accessing, processing, complete
   const [results, setResults] = useState(null);
   const { user } = useAuthStore();
+  const [fileError, setFileError] = useState(null);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -38,12 +39,15 @@ const HeartbeatAnalyzer = () => {
   };
 
   const handleFile = (uploadedFile) => {
-    const validTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/x-wav'];
-    if (!validTypes.includes(uploadedFile.type)) {
-      alert('Please upload a valid audio file (WAV, MP3)');
+    setFileError(null);
+    const isWav = uploadedFile.type === 'audio/wav' || uploadedFile.type === 'audio/x-wav' || uploadedFile.name.toLowerCase().endsWith('.wav');
+    if (!isWav) {
+      setFile(null);
+      setResults(null);
+      setProcessingStage('idle');
+      setFileError('Please upload a WAV audio file (.wav) for heartbeat analysis.');
       return;
     }
-    
     setFile(uploadedFile);
     startProcessing(uploadedFile);
   };
@@ -177,7 +181,7 @@ const HeartbeatAnalyzer = () => {
                         type="file"
                         id="file-upload"
                         className="hidden"
-                        accept="audio/*"
+                        accept=".wav,audio/wav,audio/x-wav"
                         onChange={handleChange}
                       />
                       <label
@@ -196,6 +200,9 @@ const HeartbeatAnalyzer = () => {
                     </div>
                   </div>
                 </div>
+                {fileError && (
+                  <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{fileError}</div>
+                )}
               </div>
 
               {/* Info Panel */}

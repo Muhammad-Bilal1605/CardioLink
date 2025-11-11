@@ -243,6 +243,38 @@ export const checkAuth = async (req, res) => {
 			return res.status(400).json({ success: false, message: "User not found" });
 		}
 
+		// If user is a pharmacist, populate pharmacy data
+		if (user.__t === 'pharmacist') {
+			const pharmacist = await Pharmacist.findById(req.userId)
+				.select("-password")
+				.populate('pharmacyId', 'pharmacyName');
+			
+			return res.status(200).json({ 
+				success: true, 
+				user: {
+					...pharmacist._doc,
+					pharmacyId: pharmacist.pharmacyId?._id,
+					pharmacyName: pharmacist.pharmacyId?.pharmacyName
+				}
+			});
+		}
+
+		// If user is a hospital admin, populate hospital data
+		if (user.__t === 'hospitalAdmin') {
+			const hospitalAdmin = await HospitalAdmin.findById(req.userId)
+				.select("-password")
+				.populate('hospitalId', 'hospitalName');
+			
+			return res.status(200).json({ 
+				success: true, 
+				user: {
+					...hospitalAdmin._doc,
+					hospitalId: hospitalAdmin.hospitalId?._id,
+					hospitalName: hospitalAdmin.hospitalId?.hospitalName
+				}
+			});
+		}
+
 		res.status(200).json({ success: true, user });
 	} catch (error) {
 		console.log("Error in checkAuth ", error);
@@ -485,5 +517,76 @@ export const checkEmailExists = async (req, res) => {
 			success: false, 
 			message: "Error checking email availability" 
 		});
+	}
+};
+
+// Pharmacy Admin Login (after pharmacy approval)
+export const pharmacyAdminLogin = async (req, res) => {
+	const { email, password } = req.body;
+	try {
+		// Import Pharmacy model dynamically
+		const Pharmacy = (await import('../models/Pharmacy.js')).default;
+		
+		// Find the pharmacy by admin email
+		const pharmacy = await Pharmacy.findOne({ 
+			'administrativeContact.emailAddress': email,
+			status: 'Approved'
+		});
+		
+		if (!pharmacy) {
+			return res.status(400).json({ 
+				success: false, 
+				message: "Pharmacy not found or not approved" 
+			});
+		}
+
+		// Compare the password
+		const isPasswordValid = await bcryptjs.compare(password, pharmacy.administrativeContact.password);
+		if (!isPasswordValid) {
+			return res.status(400).json({ success: false, message: "Invalid credentials" });
+		}
+
+	// Check if pharmacist user exists, if not create one
+	let pharmacist = await Pharmacist.findOne({ email });
+	if (!pharmacist) {
+		pharmacist = new Pharmacist({
+			email: pharmacy.administrativeContact.emailAddress,
+			password: pharmacy.administrativeContact.password,
+			name: pharmacy.administrativeContact.fullName,
+			pharmacyId: pharmacy._id,
+			pharmacyName: pharmacy.pharmacyName,
+			isVerified: true
+		});
+		await pharmacist.save();
+	} else {
+		// Update pharmacyId and pharmacyName if they changed
+		if (pharmacist.pharmacyId?.toString() !== pharmacy._id.toString()) {
+			pharmacist.pharmacyId = pharmacy._id;
+			pharmacist.pharmacyName = pharmacy.pharmacyName;
+			await pharmacist.save();
+		}
+	}
+
+		// Generate token and set cookie
+		generateTokenAndSetCookie(res, pharmacist._id);
+
+		// Update last login date
+		pharmacist.lastLogin = new Date();
+		await pharmacist.save();
+
+		// Return the success response
+		res.status(200).json({
+			success: true,
+			message: "Logged in successfully",
+			user: {
+				...pharmacist._doc,
+				password: undefined,
+				pharmacyName: pharmacy.pharmacyName,
+				pharmacyId: pharmacy._id
+			},
+		});
+	} catch (error) {
+		console.log("Error in pharmacy admin login ", error);
+		res.status(400).json({ success: false, message: error.message });
 	}
 };

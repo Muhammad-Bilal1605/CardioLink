@@ -3,6 +3,8 @@ import Patient from '../models/User.js';
 import { User } from '../models/user.model.js';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
+import cloudinary from '../config/cloudinary.js';
 
 // Multer configuration with simplified error handling
 const storage = multer.diskStorage({
@@ -14,10 +16,10 @@ const storage = multer.diskStorage({
   }
 });
 
-// Simple multer setup that accepts any file type for testing
+// Simple multer setup that accepts common file types
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit to allow PDFs/videos if needed
 }).fields([
   { name: 'documents', maxCount: 10 },
   { name: 'images', maxCount: 10 }
@@ -25,6 +27,24 @@ const upload = multer({
 
 // Export the upload middleware
 export const uploadFiles = upload;
+
+// Helper: extract Cloudinary public_id from a secure URL
+const extractCloudinaryPublicId = (secureUrl) => {
+  try {
+    const uploadIndex = secureUrl.indexOf('/upload/');
+    if (uploadIndex === -1) return null;
+    let tail = secureUrl.substring(uploadIndex + '/upload/'.length);
+    if (tail.startsWith('v')) {
+      const firstSlash = tail.indexOf('/');
+      if (firstSlash !== -1) tail = tail.substring(firstSlash + 1);
+    }
+    const lastDot = tail.lastIndexOf('.');
+    if (lastDot !== -1) tail = tail.substring(0, lastDot);
+    return tail;
+  } catch (_) {
+    return null;
+  }
+};
 
 // Create new procedure
 export const createProcedure = async (req, res) => {
@@ -78,22 +98,44 @@ export const createProcedure = async (req, res) => {
         });
       }
 
-      // Create arrays for documents and images paths
+    // Create arrays for documents and images urls (Cloudinary)
       let documents = [];
       let images = [];
 
-      // Process document files if any
+      // Upload document files to Cloudinary (raw resource_type)
       if (req.files && req.files.documents) {
-        documents = req.files.documents.map(file => 
-          `/uploads/${file.filename}`
+        const uploads = await Promise.all(
+          req.files.documents.map(async (file) => {
+            try {
+              const result = await cloudinary.uploader.upload(file.path, {
+                resource_type: 'auto',
+                folder: 'cardiolink/procedures/documents'
+              });
+              return result.secure_url;
+            } finally {
+              try { fs.unlinkSync(file.path); } catch (_) {}
+            }
+          })
         );
+        documents = uploads.filter(Boolean);
       }
       
-      // Process image files if any
+      // Upload image files to Cloudinary
       if (req.files && req.files.images) {
-        images = req.files.images.map(file => 
-          `/uploads/${file.filename}`
+        const uploads = await Promise.all(
+          req.files.images.map(async (file) => {
+            try {
+              const result = await cloudinary.uploader.upload(file.path, {
+                resource_type: 'auto',
+                folder: 'cardiolink/procedures/images'
+              });
+              return result.secure_url;
+            } finally {
+              try { fs.unlinkSync(file.path); } catch (_) {}
+            }
+          })
         );
+        images = uploads.filter(Boolean);
       }
 
     // Create procedure object with auto-populated fields
@@ -211,34 +253,61 @@ export const updateProcedure = async (req, res) => {
           message: 'Procedure not found' 
         });
       }
+
+      // Enforce front-desk ownership: front-desk can only update what they uploaded within their hospital
+      const currentUser = await User.findById(req.userId);
+      if (!currentUser) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      if (currentUser.role === 'hospital-front-desk') {
+        const sameHospital = String(existingProcedure.hospitalId) === String(currentUser.hospitalId);
+        const isUploader = String(existingProcedure.uploadedBy) === String(currentUser._id);
+        if (!sameHospital || !isUploader) {
+          return res.status(403).json({ success: false, message: 'Front desk can only update their own uploads' });
+        }
+      }
       
       // Build update data from text fields
       const updateData = { ...req.body };
       
-      // Process new files if any
+      // Process new files if any (upload to Cloudinary and append)
       if (req.files) {
         // For documents
         if (req.files.documents && req.files.documents.length > 0) {
-          const newDocuments = req.files.documents.map(file => 
-            `/uploads/${file.filename}`
+          const newDocuments = await Promise.all(
+            req.files.documents.map(async (file) => {
+              try {
+                const result = await cloudinary.uploader.upload(file.path, {
+                  resource_type: 'auto',
+                  folder: 'cardiolink/procedures/documents'
+                });
+                return result.secure_url;
+              } finally {
+                try { fs.unlinkSync(file.path); } catch (_) {}
+              }
+            })
           );
-          
-          // Get existing documents array or empty array
           const existingDocs = existingProcedure.documents || [];
-          // Create a new array with both existing and new documents
-          updateData.documents = [...existingDocs, ...newDocuments];
+          updateData.documents = [...existingDocs, ...newDocuments.filter(Boolean)];
         }
         
         // For images
         if (req.files.images && req.files.images.length > 0) {
-          const newImages = req.files.images.map(file => 
-            `/uploads/${file.filename}`
+          const newImages = await Promise.all(
+            req.files.images.map(async (file) => {
+              try {
+                const result = await cloudinary.uploader.upload(file.path, {
+                  resource_type: 'auto',
+                  folder: 'cardiolink/procedures/images'
+                });
+                return result.secure_url;
+              } finally {
+                try { fs.unlinkSync(file.path); } catch (_) {}
+              }
+            })
           );
-          
-          // Get existing images array or empty array
           const existingImages = existingProcedure.images || [];
-          // Create a new array with both existing and new images
-          updateData.images = [...existingImages, ...newImages];
+          updateData.images = [...existingImages, ...newImages.filter(Boolean)];
         }
       }
 
@@ -265,13 +334,45 @@ export const updateProcedure = async (req, res) => {
     }
 };
 
+// List procedures for the authenticated user's hospital
+export const getHospitalProcedures = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user.hospitalId) return res.status(403).json({ success: false, message: 'User not associated with a hospital' });
+    const procedures = await Procedure.find({ hospitalId: user.hospitalId }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: procedures });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Delete a procedure
 export const deleteProcedure = async (req, res) => {
   try {
-    const procedure = await Procedure.findByIdAndDelete(req.params.id);
+    const procedure = await Procedure.findById(req.params.id);
     if (!procedure) {
       return res.status(404).json({ success: false, message: 'Procedure not found' });
     }
+
+    // Attempt to delete all Cloudinary assets referenced
+    const urls = [
+      ...(procedure.documents || []),
+      ...(procedure.images || [])
+    ];
+    for (const url of urls) {
+      const publicId = extractCloudinaryPublicId(url || '');
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+        } catch (e1) {
+          try { await cloudinary.uploader.destroy(publicId, { resource_type: 'video' }); } catch (e2) {}
+          try { await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }); } catch (e3) {}
+        }
+      }
+    }
+
+    await Procedure.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

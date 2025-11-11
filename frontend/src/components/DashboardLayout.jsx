@@ -47,6 +47,7 @@ const DashboardLayout = ({ children, title, role }) => {
         return [
           ...baseItems,
           { name: "Manage Hospital Requests", href: "/hospital-admin", icon: <Users className="w-5 h-5" /> },
+          { name: "Manage Pharmacy Requests", href: "/pharmacy-admin", icon: <Users className="w-5 h-5" /> },
           { name: "Reports", href: "/reports", icon: <PieChart className="w-5 h-5" /> },
         ];
         case "doctor":
@@ -73,23 +74,30 @@ const DashboardLayout = ({ children, title, role }) => {
         ];
       case "radiologist":
         return [
-          ...baseItems,
+          
+          { name: "Radiologist Dashboard", href: "/radiologist-dashboard", icon: <Home className="w-5 h-5" /> },
           { name: "Upload Imaging", href: "/patient-imaging", icon: <PieChart className="w-5 h-5" /> },
+          { name: "Update Imagings", href: "/update-imagings", icon: <ClipboardList className="w-5 h-5" /> },
           { name: "ECG Analysis", href: "/ecg-analysis", icon: <Activity className="w-5 h-5" /> },
           { name: "ECHO Analysis", href: "/echo-analysis", icon: <Video className="w-5 h-5" /> },
           { name: "Heartbeat Analysis", href: "/heartbeat-analysis", icon: <AudioWaveform className="w-5 h-5" /> },
         ];
       case "lab-technologist":
         return [
-          ...baseItems,
+          
+          { name: "Lab Dashboard", href: "/lab-dashboard", icon: <Home className="w-5 h-5" /> },
           { name: "Upload Lab Results", href: "/patient-lab-results", icon: <PieChart className="w-5 h-5" /> },
-          { name: "Results", href: "/results", icon: <Users className="w-5 h-5" /> },
+          { name: "Update Lab Results", href: "/update-lab-results", icon: <ClipboardList className="w-5 h-5" /> },
         ];
       case "hospital-front-desk":
         return [
-          ...baseItems,
-          { name: "Upload Procedures", href: "/patient-procedures", icon: <ClipboardList className="w-5 h-5" /> },
-          { name: "Upload Hospitalizations", href: "/patient-hospitalizations", icon: <Users className="w-5 h-5" /> },
+          
+          { name: "Front Desk Dashboard", href: "/front-desk-dashboard", icon: <Home className="w-5 h-5" /> },
+          { name: "Upload Hospitalizations", href: "/patient-hospitalizations", icon: <PieChart className="w-5 h-5" /> },
+          { name: "Upload Procedures", href: "/patient-procedures", icon: <PieChart className="w-5 h-5" /> },
+          { name: "Update Procedures", href: "/update-procedures", icon: <ClipboardList className="w-5 h-5" /> },
+          { name: "Update Hospitalizations", href: "/update-hospitalizations", icon: <Users className="w-5 h-5" /> },
+          
         ];
       default:
         return baseItems;

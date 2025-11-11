@@ -3,6 +3,15 @@ import mongoose from "mongoose";
 
 export const Pharmacist = User.discriminator(
     "pharmacist",
-    new mongoose.Schema({})
+    new mongoose.Schema({
+      pharmacyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Pharmacy',
+        required: true
+      },
+      pharmacyName: {
+        type: String
+      }
+    })
   );
   

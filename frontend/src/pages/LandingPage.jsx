@@ -64,10 +64,10 @@ function LandingPage() {
       icon: <PieChart className="h-6 w-6 mb-2 text-emerald-500" />,
       description: "Access comprehensive analytics, system configuration, hospital approvals, and platform management"
     },
-    pharmacist: {
-      title: "Pharmacist",
+    pharmacy: {
+      title: "Pharmacy",
       icon: <Pill className="h-6 w-6 mb-2 text-emerald-500" />,
-      description: "Upload products, manage inventory, and process prescription orders"
+      description: "Register your pharmacy, manage inventory, and process prescription orders through our digital platform"
     }
   };
 
@@ -200,19 +200,36 @@ function LandingPage() {
                           </div>
                         )}
                         
-                        {(key === 'admin' || key === 'pharmacist') && (
+                        {key === 'admin' && (
                           <div className="mt-3 space-y-2 w-full">
                             <Link
-                              to={key === 'admin' ? '/admin-login' : '/pharmacist-login'}
+                              to="/admin-login"
                               className="block w-full bg-transparent border border-white text-white px-3 py-2 rounded-md text-sm hover:bg-white hover:text-emerald-800 transition-colors"
                             >
                               Login
                             </Link>
                             <Link
-                              to={`/signup?role=${key}`}
+                              to="/signup?role=admin"
                               className="block w-full bg-emerald-600 text-white px-3 py-2 rounded-md text-sm hover:bg-emerald-700 transition-colors"
                             >
                               Sign Up
+                            </Link>
+                          </div>
+                        )}
+                        
+                        {key === 'pharmacy' && (
+                          <div className="mt-3 space-y-2 w-full">
+                            <Link
+                              to="/pharmacy-registration"
+                              className="block w-full bg-emerald-600 text-white px-3 py-2 rounded-md text-sm hover:bg-emerald-700 transition-colors"
+                            >
+                              Register Pharmacy
+                            </Link>
+                            <Link
+                              to="/pharmacy-login"
+                              className="block w-full bg-transparent border border-white text-white px-3 py-2 rounded-md text-sm hover:bg-white hover:text-emerald-800 transition-colors"
+                            >
+                              Pharmacy Login
                             </Link>
                           </div>
                         )}
@@ -248,7 +265,7 @@ function LandingPage() {
                 <div className="relative z-10 rounded-lg shadow-2xl border border-white/20 overflow-hidden bg-black">
                   <iframe 
                     className="w-full h-64 md:h-80 lg:h-96"
-                    src="https://www.youtube.com/embed/7e90gBu4pas?rel=0&modestbranding=1&showinfo=0&controls=1&autoplay=0" 
+                    src="https://www.youtube.com/embed/K8BEIjDkagw" 
                     title="CardioLink Platform Demo"
                     frameBorder="0" 
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 

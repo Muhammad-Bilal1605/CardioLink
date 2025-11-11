@@ -10,13 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "agora-rtc-sdk-ng": "^4.24.0",
     "auth-tutorial": "file:..",
-    "axios": "^1.12.2",
+    "axios": "^1.7.3",
     "chart.js": "^4.4.9",
     "cors": "^2.8.5",
     "daisyui": "^5.0.35",
-    "date-fns": "^4.1.0",
     "express": "^5.1.0",
     "framer-motion": "^11.3.21",
     "lucide-react": "^0.424.0",
@@ -30,7 +28,6 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "styled-jsx": "^5.1.7",
-    "ws": "^8.18.2",
     "zustand": "^4.5.4"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import Hospital from '../models/Hospital.js';
 import {
   createHospital,
   getHospitals,
@@ -65,8 +66,8 @@ router.get('/test-files/:hospitalId', async (req, res) => {
   }
 });
 
-// Test endpoint to directly serve a file
-router.get('/download-file/:filename', (req, res) => {
+// Test endpoint to directly serve a file - redirect to Cloudinary if available
+router.get('/download-file/:filename', async (req, res) => {
   try {
     const filename = req.params.filename;
     const __dirname = path.resolve();
@@ -74,7 +75,57 @@ router.get('/download-file/:filename', (req, res) => {
     
     console.log('Direct download attempt for:', filename);
     console.log('Looking for file at:', filePath);
+
+    // Try DB for Cloudinary URL and redirect
+    try {
+      const doc = await Hospital.findOne({
+        $or: [
+          { 'documents.hospitalRegistrationCertificate.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.healthDepartmentLicense.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.proofOfOwnership.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.practitionersList.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.labCertification.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.ambulanceRegistration.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.taxRegistration.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.dataPrivacyPolicy.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'documents.accreditationCertificates.url': { $regex: `${filename}$`, $options: 'i' } },
+          { 'administrativeContact.idProof.documentUrl': { $regex: `${filename}$`, $options: 'i' } }
+        ]
+      }).lean();
+      
+      if (doc) {
+        // Check all possible URL locations
+        const allUrls = [];
+        
+        // Check documents
+        if (doc.documents) {
+          Object.values(doc.documents).forEach(docItem => {
+            if (Array.isArray(docItem)) {
+              docItem.forEach(item => {
+                if (item.url) allUrls.push(item.url);
+              });
+            } else if (docItem && docItem.url) {
+              allUrls.push(docItem.url);
+            }
+          });
+        }
+        
+        // Check admin ID proof
+        if (doc.administrativeContact?.idProof?.documentUrl) {
+          allUrls.push(doc.administrativeContact.idProof.documentUrl);
+        }
+        
+        const match = allUrls.find(u => typeof u === 'string' && u.toLowerCase().endsWith(filename.toLowerCase()));
+        if (match && match.startsWith('http')) {
+          console.log('↪ Redirecting to Cloudinary URL:', match);
+          return res.redirect(302, match);
+        }
+      }
+    } catch (e) {
+      console.log('DB lookup for Cloudinary URL failed:', e.message);
+    }
     
+    // Fallback to legacy local file
     if (fs.existsSync(filePath)) {
       console.log('✓ File found, sending...');
       res.sendFile(filePath);

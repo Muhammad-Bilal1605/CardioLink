@@ -10,6 +10,7 @@ const EchoAnalyzer = () => {
   const [results, setResults] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [fileError, setFileError] = useState(null);
   const { user } = useAuthStore();
 
   const processingSteps = [
@@ -48,6 +49,14 @@ const EchoAnalyzer = () => {
   };
 
   const handleFile = (file) => {
+    setFileError(null);
+    const isAvi = file.type === 'video/x-msvideo' || file.name.toLowerCase().endsWith('.avi');
+    if (!isAvi) {
+      setUploadedFile(null);
+      setResults(null);
+      setFileError('Please upload an AVI video (.avi) for ECHO analysis.');
+      return;
+    }
     setUploadedFile(file);
     setResults(null);
     processFile(file);
@@ -58,77 +67,95 @@ const EchoAnalyzer = () => {
     setProcessingStep(0);
     setProgress(0);
     
-    for (let i = 0; i < processingSteps.length; i++) {
-      setProcessingStep(i);
-      const stepProgress = (i / processingSteps.length) * 100;
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('video', file);
       
-      const duration = processingSteps[i].duration;
-      const frames = 40;
-      const increment = (100 / processingSteps.length) / frames;
+      // Start the progress animation
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          const newProgress = prev + Math.random() * 3;
+          if (newProgress >= 95) {
+            clearInterval(progressInterval);
+            return 95; // Cap at 95% until we get results
+          }
+          return newProgress;
+        });
+        
+        // Update processing step based on progress
+        setProcessingStep(prevStep => {
+          const currentProgress = progress;
+          const stepIndex = Math.floor((currentProgress / 100) * processingSteps.length);
+          return Math.min(stepIndex, processingSteps.length - 1);
+        });
+      }, 300);
       
-      for (let frame = 0; frame < frames; frame++) {
-        await new Promise(resolve => setTimeout(resolve, duration / frames));
-        setProgress(stepProgress + (frame + 1) * increment);
-      }
-    }
-    
-    const mockResults = {
-      timestamp: new Date().toISOString(),
-      studyId: "ECHO-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
-      videoMetrics: {
-        duration: "12.3 seconds",
-        frameRate: "30 fps",
-        resolution: "1920x1080",
-        quality: "High Definition"
-      },
-      chambersAnalysis: {
-        leftVentricle: {
-          ejectionFraction: { value: 58, unit: "%", range: "55-70", status: "normal" },
-          endDiastolicVolume: { value: 142, unit: "mL", range: "120-160", status: "normal" },
-          endSystolicVolume: { value: 59, unit: "mL", range: "40-70", status: "normal" },
-          wallMotion: "Normal"
-        },
-        leftAtrium: {
-          volume: { value: 54, unit: "mL", range: "22-58", status: "normal" },
-          diameter: { value: 3.8, unit: "cm", range: "2.7-4.0", status: "normal" }
-        },
-        rightVentricle: {
-          function: "Normal",
-          systolicPressure: { value: 28, unit: "mmHg", range: "15-30", status: "normal" }
-        },
-        aorticRoot: {
-          diameter: { value: 3.2, unit: "cm", range: "2.0-3.7", status: "normal" }
+      // Make API call to backend
+      const response = await fetch('http://localhost:5000/api/echo/analyze', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'x-upload-start': new Date().toISOString()
         }
-      },
-      valvularAssessment: {
-        mitralValve: { function: "Normal", regurgitation: "Trace", stenosis: "None" },
-        aorticValve: { function: "Normal", regurgitation: "None", stenosis: "None" },
-        tricuspidValve: { function: "Normal", regurgitation: "Mild", stenosis: "None" },
-        pulmonaryValve: { function: "Normal", regurgitation: "None", stenosis: "None" }
-      },
-      diastolicFunction: {
-        grade: "Normal (Grade I)",
-        eWaveVelocity: { value: 0.78, unit: "m/s", status: "normal" },
-        aWaveVelocity: { value: 0.65, unit: "m/s", status: "normal" },
-        eaRatio: { value: 1.2, unit: "", status: "normal" }
-      },
-      overallAssessment: {
-        diagnosis: "Normal Echocardiogram",
-        classification: "NORMAL",
-        confidence: 94.2,
-        riskLevel: "Low"
-      },
-      recommendations: [
-        "Cardiac function within normal limits",
-        "Continue routine cardiovascular health maintenance",
-        "No immediate follow-up echocardiography required",
-        "Regular exercise and heart-healthy diet recommended"
-      ]
-    };
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setResults(mockResults);
-    setIsProcessing(false);
+      });
+      
+      clearInterval(progressInterval);
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (jsonError) {
+          throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+        }
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed');
+      }
+      
+      // Complete progress and set final step
+      setProgress(100);
+      setProcessingStep(processingSteps.length - 1);
+      
+      // Wait a moment to show completion
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Set results from AI analysis
+      setResults(result);
+      setIsProcessing(false);
+      
+    } catch (error) {
+      console.error('Echo analysis error:', error);
+      
+      // Clear progress animation
+      setIsProcessing(false);
+      setProgress(0);
+      setProcessingStep(0);
+      
+      // Create error result
+      const errorResult = {
+        error: true,
+        timestamp: new Date().toISOString(),
+        studyId: "ERROR-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+        errorMessage: error.message,
+        errorDetails: error.message.includes('Python') ? 
+          'The AI analysis service is currently unavailable. Please ensure the Python API server is running.' :
+          'There was an error processing your echocardiogram video.',
+        recommendations: [
+          'Please check that the Python AI service is running',
+          'Verify the video file is a valid echocardiogram',
+          'Try uploading a different video file',
+          'Contact support if the issue persists'
+        ]
+      };
+      
+      setResults(errorResult);
+    }
   };
 
   const resetAnalysis = () => {
@@ -152,8 +179,8 @@ const EchoAnalyzer = () => {
                 <Heart className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">EchoVision Analysis Platform</h1>
-                <p className="text-purple-100 mt-1">Advanced echocardiogram video analysis powered by AI</p>
+                <h1 className="text-3xl font-bold">AI Ejection Fraction Calculator</h1>
+                <p className="text-purple-100 mt-1">AI-powered Left Ventricular Ejection Fraction analysis from echocardiogram videos</p>
               </div>
             </div>
           </div>
@@ -171,7 +198,7 @@ const EchoAnalyzer = () => {
                       <Play className="w-8 h-8 text-purple-600" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Echocardiogram Video</h2>
-                    <p className="text-gray-600">Upload your ECHO video for comprehensive cardiac chamber and valve analysis</p>
+                    <p className="text-gray-600">Upload your ECHO video for AI-powered Ejection Fraction calculation</p>
                   </div>
                   
                   <div
@@ -198,19 +225,21 @@ const EchoAnalyzer = () => {
                         <input
                           type="file"
                           className="hidden"
-                          accept=".mp4,.avi,.mov,.wmv,.dicom"
+                          accept=".avi,video/x-msvideo"
                           onChange={handleFileInput}
                         />
                       </label>
                       
                       <div className="mt-6 text-sm text-gray-500 space-y-1">
                         <p className="font-medium">Supported formats:</p>
-                        <p>MP4, AVI, MOV, WMV, DICOM</p>
-                        <p className="text-xs">Maximum file size: 500MB • Recommended: 1080p or higher</p>
+                        <p>AVI</p>
                       </div>
                     </div>
                   </div>
                 </div>
+                {fileError && (
+                  <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{fileError}</div>
+                )}
               </div>
 
               {/* Info Panel */}
@@ -218,28 +247,28 @@ const EchoAnalyzer = () => {
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                     <Heart className="w-5 h-5 mr-2 text-purple-600" />
-                    Analysis Features
+                    AI Analysis Features
                   </h3>
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
                       <div>
-                        <p className="font-medium text-gray-900">Chamber Analysis</p>
-                        <p className="text-sm text-gray-600">Comprehensive cardiac chamber assessment</p>
+                        <p className="font-medium text-gray-900">Ejection Fraction</p>
+                        <p className="text-sm text-gray-600">AI-powered EF calculation from video analysis</p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                       <div>
-                        <p className="font-medium text-gray-900">Valve Function</p>
-                        <p className="text-sm text-gray-600">Detailed valvular assessment and grading</p>
+                        <p className="font-medium text-gray-900">Clinical Classification</p>
+                        <p className="text-sm text-gray-600">Automated heart failure category assessment</p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
                       <div>
-                        <p className="font-medium text-gray-900">Motion Analysis</p>
-                        <p className="text-sm text-gray-600">Wall motion and ejection fraction calculation</p>
+                        <p className="font-medium text-gray-900">Risk Assessment</p>
+                        <p className="text-sm text-gray-600">Clinical risk level based on EF values</p>
                       </div>
                     </div>
                   </div>
@@ -248,11 +277,11 @@ const EchoAnalyzer = () => {
                 <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border border-purple-200 p-6">
                   <div className="flex items-center space-x-3 mb-3">
                     <Brain className="w-6 h-6 text-purple-600" />
-                    <h3 className="text-lg font-bold text-purple-900">AI-Powered Video Analysis</h3>
+                    <h3 className="text-lg font-bold text-purple-900">AI-Powered EF Analysis</h3>
                   </div>
                   <p className="text-purple-800 text-sm">
-                    Our advanced AI algorithms analyze echocardiogram videos frame by frame, providing 
-                    accurate measurements and assessments with 94%+ confidence rates.
+                    Our enhanced R(2+1)D ResNet model analyzes echocardiogram videos frame by frame to calculate 
+                    Left Ventricular Ejection Fraction with high accuracy and clinical reliability.
                   </p>
                 </div>
               </div>
@@ -359,147 +388,186 @@ const EchoAnalyzer = () => {
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <CheckCircle className="w-7 h-7 text-green-600" />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      results.error ? 'bg-red-100' : 'bg-green-100'
+                    }`}>
+                      {results.error ? (
+                        <AlertCircle className="w-7 h-7 text-red-600" />
+                      ) : (
+                        <CheckCircle className="w-7 h-7 text-green-600" />
+                      )}
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Echocardiogram Analysis Complete</h2>
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        {results.error ? 'Analysis Error' : 'Echocardiogram Analysis Complete'}
+                      </h2>
                       <p className="text-gray-600">Study ID: {results.studyId}</p>
                     </div>
                   </div>
                   <div className="text-right text-sm text-gray-500">
                     <p className="font-medium">Analyzed: {new Date(results.timestamp).toLocaleString()}</p>
-                    <p>Video: {results.videoMetrics.duration} • {results.videoMetrics.quality}</p>
+                    {results.videoMetrics && (
+                      <p>Video: {results.videoMetrics.duration} • {results.videoMetrics.quality}</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Overall Assessment */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Overall Assessment</h3>
-                <div className="flex items-center justify-between p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                  <div>
-                    <h4 className="text-2xl font-bold text-green-800 mb-1">{results.overallAssessment.diagnosis}</h4>
-                    <p className="text-green-700 font-medium">Classification: {results.overallAssessment.classification}</p>
-                    <p className="text-green-600 font-medium mt-1">Risk Level: {results.overallAssessment.riskLevel}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-green-700">{results.overallAssessment.confidence}%</div>
-                    <div className="text-green-600 font-medium">Confidence</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Left Ventricle Analysis */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Left Ventricular Function</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Ejection Fraction</h4>
-                    <div className="text-3xl font-bold text-blue-700 mb-1">{results.chambersAnalysis.leftVentricle.ejectionFraction.value}%</div>
-                    <div className="text-sm text-blue-600">Normal: {results.chambersAnalysis.leftVentricle.ejectionFraction.range}</div>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
-                    <h4 className="font-bold text-gray-900 mb-2">EDV</h4>
-                    <div className="text-3xl font-bold text-indigo-700 mb-1">{results.chambersAnalysis.leftVentricle.endDiastolicVolume.value}</div>
-                    <div className="text-sm text-indigo-600">{results.chambersAnalysis.leftVentricle.endDiastolicVolume.unit}</div>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
-                    <h4 className="font-bold text-gray-900 mb-2">ESV</h4>
-                    <div className="text-3xl font-bold text-purple-700 mb-1">{results.chambersAnalysis.leftVentricle.endSystolicVolume.value}</div>
-                    <div className="text-sm text-purple-600">{results.chambersAnalysis.leftVentricle.endSystolicVolume.unit}</div>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Wall Motion</h4>
-                    <div className="text-xl font-bold text-pink-700 mb-1">{results.chambersAnalysis.leftVentricle.wallMotion}</div>
-                    <div className="text-sm text-pink-600">Assessment</div>
+              {/* Error Display */}
+              {results.error && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                  <div className="flex items-start space-x-4">
+                    <AlertCircle className="w-8 h-8 text-red-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-red-900 mb-2">Analysis Failed</h3>
+                      <p className="text-red-800 mb-4">{results.errorDetails}</p>
+                      <div className="bg-white rounded-xl p-4 border border-red-200">
+                        <h4 className="font-semibold text-red-900 mb-2">Error Details:</h4>
+                        <p className="text-red-700 text-sm">{results.errorMessage}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Valvular Assessment */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Valvular Assessment</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {Object.entries(results.valvularAssessment).map(([valve, assessment]) => (
-                    <div key={valve} className="p-6 border border-gray-200 rounded-xl hover:shadow-lg transition-shadow">
-                      <h4 className="font-bold text-gray-900 mb-4 capitalize">
-                        {valve.replace(/([A-Z])/g, ' $1').trim()}
-                      </h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-medium">Function:</span>
-                          <span className="font-bold text-green-600">{assessment.function}</span>
+              {/* Show recommendations for errors too */}
+              {results.error && (
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Troubleshooting Steps</h3>
+                  <div className="space-y-4">
+                    {results.recommendations.map((recommendation, index) => (
+                      <div key={index} className="flex items-start space-x-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-sm font-bold text-blue-800">{index + 1}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-medium">Regurgitation:</span>
-                          <span className="font-bold">{assessment.regurgitation}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-medium">Stenosis:</span>
-                          <span className="font-bold">{assessment.stenosis}</span>
+                        <p className="text-gray-800 font-medium">{recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Success Results - Only show if no error */}
+              {!results.error && (
+                <>
+                  {/* AI Ejection Fraction Analysis */}
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">AI Ejection Fraction Analysis</h3>
+                    
+                    {/* Main EF Result */}
+                    <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 mb-6">
+                      <div className="text-center">
+                        <h4 className="text-2xl font-bold text-gray-900 mb-4">Left Ventricular Ejection Fraction</h4>
+                        <div className="text-6xl font-bold text-blue-700 mb-2">{results.aiAnalysis.ejectionFraction.value}%</div>
+                        <div className="text-lg text-blue-600 mb-4">Normal range: {results.aiAnalysis.ejectionFraction.range}</div>
+                        
+                        {/* Status Badge */}
+                        <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${
+                          results.aiAnalysis.ejectionFraction.status === 'normal' ? 'bg-green-100 text-green-800' :
+                          results.aiAnalysis.ejectionFraction.status === 'mildly_reduced' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {results.aiAnalysis.ejectionFraction.status === 'normal' ? 'Normal' :
+                           results.aiAnalysis.ejectionFraction.status === 'mildly_reduced' ? 'Mildly Reduced' :
+                           'Reduced'}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Diastolic Function */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Diastolic Function Analysis</h3>
-                <div className="grid md:grid-cols-4 gap-6">
-                  <div className="p-6 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl border border-teal-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Grade</h4>
-                    <div className="text-lg font-bold text-teal-700">{results.diastolicFunction.grade}</div>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-cyan-50 to-sky-50 rounded-xl border border-cyan-200">
-                    <h4 className="font-bold text-gray-900 mb-2">E Wave</h4>
-                    <div className="text-2xl font-bold text-cyan-700 mb-1">{results.diastolicFunction.eWaveVelocity.value}</div>
-                    <div className="text-sm text-cyan-600">{results.diastolicFunction.eWaveVelocity.unit}</div>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-sky-50 to-blue-50 rounded-xl border border-sky-200">
-                    <h4 className="font-bold text-gray-900 mb-2">A Wave</h4>
-                    <div className="text-2xl font-bold text-sky-700 mb-1">{results.diastolicFunction.aWaveVelocity.value}</div>
-                    <div className="text-sm text-sky-600">{results.diastolicFunction.aWaveVelocity.unit}</div>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                    <h4 className="font-bold text-gray-900 mb-2">E/A Ratio</h4>
-                    <div className="text-2xl font-bold text-blue-700 mb-1">{results.diastolicFunction.eaRatio.value}</div>
-                    <div className="text-sm text-blue-600">Ratio</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Clinical Recommendations</h3>
-                <div className="space-y-4">
-                  {results.recommendations.map((recommendation, index) => (
-                    <div key={index} className="flex items-start space-x-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-sm font-bold text-green-800">{index + 1}</span>
+                    {/* Clinical Classification */}
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                      <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <h4 className="font-bold text-gray-900 mb-2">Clinical Category</h4>
+                        <div className="text-xl font-bold text-purple-700 mb-1">{results.aiAnalysis.category}</div>
+                        <div className="text-sm text-purple-600">{results.aiAnalysis.description}</div>
                       </div>
-                      <p className="text-gray-800 font-medium">{recommendation}</p>
+                      <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                        <h4 className="font-bold text-gray-900 mb-2">AI Confidence</h4>
+                        <div className="text-xl font-bold text-green-700 mb-1">{results.aiAnalysis.confidence}%</div>
+                        <div className="text-sm text-green-600">Analysis reliability</div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex space-x-4">
-                <button className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                  <Download className="w-5 h-5 mr-3" />
-                  Download ECHO Report
-                </button>
-                <button 
-                  onClick={resetAnalysis}
-                  className="flex-1 flex items-center justify-center px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  <RotateCcw className="w-5 h-5 mr-3" />
-                  Analyze New Video
-                </button>
-              </div>
+                    {/* Severity Assessment */}
+                    <div className={`p-6 rounded-xl border-2 ${
+                      results.aiAnalysis.severity === 'low' ? 'bg-green-50 border-green-200' :
+                      results.aiAnalysis.severity === 'medium' ? 'bg-yellow-50 border-yellow-200' :
+                      'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-lg font-bold text-gray-900 mb-1">Risk Assessment</h4>
+                          <p className={`font-medium ${
+                            results.aiAnalysis.severity === 'low' ? 'text-green-700' :
+                            results.aiAnalysis.severity === 'medium' ? 'text-yellow-700' :
+                            'text-red-700'
+                          }`}>
+                            {results.aiAnalysis.severity === 'low' ? 'Low Risk' :
+                             results.aiAnalysis.severity === 'medium' ? 'Medium Risk' :
+                             'High Risk'}
+                          </p>
+                        </div>
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                          results.aiAnalysis.severity === 'low' ? 'bg-green-100' :
+                          results.aiAnalysis.severity === 'medium' ? 'bg-yellow-100' :
+                          'bg-red-100'
+                        }`}>
+                          {results.aiAnalysis.severity === 'low' ? (
+                            <CheckCircle className="w-8 h-8 text-green-600" />
+                          ) : results.aiAnalysis.severity === 'medium' ? (
+                            <AlertCircle className="w-8 h-8 text-yellow-600" />
+                          ) : (
+                            <AlertCircle className="w-8 h-8 text-red-600" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clinical Recommendations */}
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Clinical Recommendations</h3>
+                    <div className="space-y-4">
+                      {results.recommendations.map((recommendation, index) => (
+                        <div key={index} className="flex items-start space-x-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-sm font-bold text-blue-800">{index + 1}</span>
+                          </div>
+                          <p className="text-gray-800 font-medium">{recommendation}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-4">
+                    <button className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                      <Download className="w-5 h-5 mr-3" />
+                      Download ECHO Report
+                    </button>
+                    <button 
+                      onClick={resetAnalysis}
+                      className="flex-1 flex items-center justify-center px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
+                      <RotateCcw className="w-5 h-5 mr-3" />
+                      Analyze New Video
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Action Buttons for Error State */}
+              {results.error && (
+                <div className="flex space-x-4">
+                  <button 
+                    onClick={resetAnalysis}
+                    className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <RotateCcw className="w-5 h-5 mr-3" />
+                    Try Again
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

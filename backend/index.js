@@ -18,7 +18,6 @@ import { connectDB } from "./db/connectDB.js";
 
 // Import auth routes (ES6 module)
 import authRoutes from "./routes/auth.route.js";
-import appointmentsRoutes from "./routes/appointmentsRoutes.js";
 
 dotenv.config();
 
@@ -55,8 +54,8 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-upload-start']
 }));
 // Socket.IO Configuration
 // In your index.js, update the Socket.IO server configuration:
@@ -69,7 +68,7 @@ const io = new Server(server, {
         callback(new Error('Not allowed by CORS'));
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
   },
@@ -168,13 +167,23 @@ app.use('/uploads', (req, res, next) => {
 });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/Backend/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use("/api/auth", authRoutes);
 
- // Or wherever your routes are
-
+// Dynamic import for Echo routes
+const loadEchoRoutes = async () => {
+  try {
+    const echoRoutes = await import("./routes/echoRoutes.js");
+    app.use('/api/echo', echoRoutes.default);
+    console.log('Echo analysis routes loaded successfully');
+    return true;
+  } catch (error) {
+    console.error('Error loading echo routes:', error.message);
+    console.log('Echo routes may not be available. Make sure the route file exists.');
+    return false;
+  }
+};
 
 // Health check endpoint for Socket.IO
 app.get('/health', (req, res) => {
@@ -185,8 +194,6 @@ app.get('/health', (req, res) => {
     socketIOEnabled: true
   });
 });
-
-app.use("/api/appointments", appointmentsRoutes);
 
 // ========== AGORA TOKEN GENERATION ENDPOINT ==========
 // Agora Token Generation
@@ -824,7 +831,14 @@ const loadMedicalRoutes = async () => {
     const medicationRoutes = await import("./routes/medicationRoutes.js");
     const vitalSignRoutes = await import("./routes/vitalSignRoutes.js");
     const hospitalRoutes = await import("./routes/hospitalRoutes.js");
-    const prescriptionRoutes = await import("./routes/prescriptionRoutes.js"); // ADD THIS LINE
+    const pharmacyRoutes = await import("./routes/pharmacyRoutes.js");
+    const prescriptionRoutes = await import("./routes/prescriptionRoutes.js");
+    const appointmentsRoutes = await import("./routes/appointmentsRoutes.js");
+    
+    // Pharmacy system routes
+    const productRoutes = await import("./routes/productRoutes.js");
+    const inventoryRoutes = await import("./routes/inventoryRoutes.js");
+    const orderRoutes = await import("./routes/orderRoutes.js");
 
     app.use('/api/patients', patientRoutes.default);
     app.use('/api/imaging', imagingRoutes.default);
@@ -835,9 +849,17 @@ const loadMedicalRoutes = async () => {
     app.use('/api/medications', medicationRoutes.default);
     app.use('/api/vital-signs', vitalSignRoutes.default);
     app.use('/api/hospitals', hospitalRoutes.default);
-    app.use('/api/prescriptions', prescriptionRoutes.default); // ADD THIS LINE
+    app.use('/api/pharmacies', pharmacyRoutes.default);
+    app.use('/api/prescriptions', prescriptionRoutes.default);
+    app.use('/api/appointments', appointmentsRoutes.default);
+    
+    // Pharmacy system routes
+    app.use('/api/products', productRoutes.default);
+    app.use('/api/inventory', inventoryRoutes.default);
+    app.use('/api/orders', orderRoutes.default);
     
     console.log('Medical routes loaded successfully');
+    console.log('Pharmacy system routes loaded successfully');
     return true;
   } catch (error) {
     console.error('Error loading medical routes:', error.message);
@@ -885,6 +907,12 @@ const startServer = async () => {
     const routesLoaded = await loadMedicalRoutes();
     if (!routesLoaded) {
       throw new Error('Failed to load routes');
+    }
+    
+    // Load echo routes
+    const echoRoutesLoaded = await loadEchoRoutes();
+    if (!echoRoutesLoaded) {
+      console.warn('Echo routes not available - continuing without echo analysis');
     }
     
     // Start server with Socket.IO

@@ -6,6 +6,7 @@ import HeartbeatAnalyzer from "./pages/AI DIagnosis/HeartbeatAnalyzer";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import HospitalLoginPage from "./pages/HospitalLoginPage";
+import PharmacyLogin from "./pages/PharmacyLogin";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
 import DashboardPage from "./pages/DashboardPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -20,8 +21,11 @@ import PatientProceduresList from "./pages/PatientProceduresList";
 import PatientHospitalizationsList from "./pages/PatientHospitalizationsList";
 import PatientVisitsList from "./pages/PatientVisitsList";
 import HospitalRegistration from "./pages/HospitalRegistration";
+import PharmacyRegistration from "./pages/PharmacyRegistration";
 import HospitalAdminDashboard from "./pages/HospitalAdminDashboard";
+import PharmacyAdminDashboard from "./pages/PharmacyAdminDashboard";
 import HospitalPersonnelDashboard from "./components/dashboards/HospitalAdminDashboard";
+import PharmacyDashboard from "./pages/PharmacyDashboard";
 
 // EHR related imports
 import EHR from './pages/EHR Pages/EHR';
@@ -40,11 +44,25 @@ import { Toaster } from "react-hot-toast";
 import { useAuthStore } from "./store/authStore";
 import { useEffect } from "react";
 import DoctorProfile from "./components/Profile/DoctorProfile";
+import RadiologistDashboard from "./pages/RadiologistDashboard";
+import LabTechnologistDashboard from "./pages/LabTechnologistDashboard";
+import ViewLabResult from "./pages/ViewLabResult";
+import ViewImaging from "./pages/ViewImaging";
+import ViewHospitalization from "./pages/ViewHospitalization";
+import ViewProcedure from "./pages/ViewProcedure";
+import FrontDeskDashboard from "./pages/FrontDeskDashboard";
 import DoctorChats from "./components/Chats/DoctorChats";
 import DoctorSetting from "./components/Setting/DoctorSetting";
 import { ProfileProvider } from './context/ProfileContext'; 
 import { PatientProvider } from './context/PatientContext';
-import DoctorChatsAgora from "./components/Chats/DoctorChatsAgora";
+import UpdateProcedures from "./pages/updatePages/UpdateProcedures";
+import EditProcedure from "./pages/updatePages/EditProcedure";
+import UpdateImagings from "./pages/updatePages/updateImagings";
+import EditImaging from "./pages/updatePages/EditImaging";
+import UpdateHospitalizations from "./pages/updatePages/UpdateHospitalizations";
+import EditHospitalization from "./pages/updatePages/EditHospitalization";
+import UpdateLabResults from "./pages/updatePages/UpdateLabResults";
+import EditLabResult from "./pages/updatePages/EditLabResult";
 
 // protect routes that require authentication
 const ProtectedRoute = ({ children }) => {
@@ -71,7 +89,7 @@ const RedirectAuthenticatedUser = ({ children }) => {
       case "admin":
         return <Navigate to='/admin-dashboard' replace />;
       case "pharmacist":
-        return <Navigate to='/pharmacist-dashboard' replace />;
+        return <Navigate to='/pharmacy-dashboard' replace />;
       case "hospital-admin":
         return <Navigate to='/hospital-admin-dashboard' replace />;
       case "doctor":
@@ -135,13 +153,13 @@ const RedirectAuthenticatedAdmin = ({ children }) => {
   return children;
 };
 
-// Role-specific redirect for Pharmacist login
-const RedirectAuthenticatedPharmacist = ({ children }) => {
+// Role-specific redirect for Pharmacy login
+const RedirectAuthenticatedPharmacy = ({ children }) => {
   const { isAuthenticated, user, logout } = useAuthStore();
 
   if (isAuthenticated && user.isVerified) {
     if (user.role === "pharmacist") {
-      return <Navigate to='/pharmacist-dashboard' replace />;
+      return <Navigate to='/pharmacy-dashboard' replace />;
     } else {
       // User is logged in with a different role
       return (
@@ -154,7 +172,7 @@ const RedirectAuthenticatedPharmacist = ({ children }) => {
               <h3 className="mt-4 text-lg font-medium text-gray-900">Already Logged In</h3>
               <p className="mt-2 text-sm text-gray-600">
                 You are currently logged in as <span className="font-semibold">{user.role}</span>. 
-                To access the Pharmacist portal, you need to logout first.
+                To access the Pharmacy portal, you need to logout first.
               </p>
               <div className="mt-6 flex space-x-3">
                 <button
@@ -279,8 +297,6 @@ function App() {
               }
             />
 
-<Route path="/chats" element={<DoctorChatsAgora />} />
-
             {/* FOr heartbeat analysis */}
             <Route
               path='/heartbeat-analysis'
@@ -321,15 +337,18 @@ function App() {
               }
             />
 
-            {/* Pharmacist specific login route */}
+            {/* Pharmacy Login Route */}
             <Route
-              path='/pharmacist-login'
+              path='/pharmacy-login'
               element={
-                <RedirectAuthenticatedPharmacist>
-                  <LoginPage />
-                </RedirectAuthenticatedPharmacist>
+                <RedirectAuthenticatedPharmacy>
+                  <PharmacyLogin />
+                </RedirectAuthenticatedPharmacy>
               }
             />
+
+            {/* Pharmacy Registration Route */}
+            <Route path='/pharmacy-registration' element={<PharmacyRegistration />} />
 
             {/* Hospital Login Route */}
             <Route
@@ -374,6 +393,16 @@ function App() {
               }
             />
 
+            {/* Pharmacy Management for Admin */}
+            <Route
+              path='/pharmacy-admin'
+              element={
+                <ProtectedRoute>
+                  <PharmacyAdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path='/admin-dashboard'
               element={
@@ -384,10 +413,10 @@ function App() {
             />
 
             <Route
-              path='/pharmacist-dashboard'
+              path='/pharmacy-dashboard/*'
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <PharmacyDashboard />
                 </ProtectedRoute>
               }
             />
@@ -400,13 +429,20 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
 
-           <Route
+            <Route
               path='/radiologist-dashboard'
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <RadiologistDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/view-imaging/:id'
+              element={
+                <ProtectedRoute>
+                  <ViewImaging />
                 </ProtectedRoute>
               }
             />
@@ -415,7 +451,33 @@ function App() {
               path='/lab-dashboard'
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <LabTechnologistDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/view-lab-result/:id'
+              element={
+                <ProtectedRoute>
+                  <ViewLabResult />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Lab Technologist Update Lab Results */}
+            <Route
+              path='/update-lab-results'
+              element={
+                <ProtectedRoute>
+                  <UpdateLabResults />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/update-lab-results/:id'
+              element={
+                <ProtectedRoute>
+                  <EditLabResult />
                 </ProtectedRoute>
               }
             />
@@ -433,7 +495,23 @@ function App() {
               path='/front-desk-dashboard'
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <FrontDeskDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/view-hospitalization/:id'
+              element={
+                <ProtectedRoute>
+                  <ViewHospitalization />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/view-procedure/:id'
+              element={
+                <ProtectedRoute>
+                  <ViewProcedure />
                 </ProtectedRoute>
               }
             />
@@ -641,6 +719,40 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Radiologist Update Imagings */}
+            <Route
+              path='/update-imagings'
+              element={
+                <ProtectedRoute>
+                  <UpdateImagings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/update-imagings/:id'
+              element={
+                <ProtectedRoute>
+                  <EditImaging />
+                </ProtectedRoute>
+              }
+            />
+            {/* Front Desk Update Procedures */}
+            <Route
+              path='/update-procedures'
+              element={
+                <ProtectedRoute>
+                  <UpdateProcedures />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/update-procedures/:id'
+              element={
+                <ProtectedRoute>
+                  <EditProcedure />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Patient Hospitalizations List route */}
             <Route
@@ -648,6 +760,23 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PatientHospitalizationsList />
+                </ProtectedRoute>
+              }
+            />
+            {/* Front Desk Update Hospitalizations */}
+            <Route
+              path='/update-hospitalizations'
+              element={
+                <ProtectedRoute>
+                  <UpdateHospitalizations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/update-hospitalizations/:id'
+              element={
+                <ProtectedRoute>
+                  <EditHospitalization />
                 </ProtectedRoute>
               }
             />

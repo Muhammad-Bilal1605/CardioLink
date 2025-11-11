@@ -235,7 +235,7 @@ const UploadImaging = () => {
           <div className="flex items-center justify-between pt-4">
             <button
               type="button"
-              onClick={() => navigate('/ehr')}
+              onClick={() => navigate('/patient-imaging')}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancel

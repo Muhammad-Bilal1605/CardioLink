@@ -18,7 +18,13 @@ import axios from 'axios';
 
 function getFileUrl(path) {
   if (!path) return '';
-  // Remove any leading slashes and ensure proper path construction
+  
+  // If it's already a full URL (Cloudinary), return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  
+  // For local files, construct the proper URL
   const cleanPath = path.replace(/^\/+/, '');
   return `http://localhost:5000/Backend/${cleanPath}`;
 }

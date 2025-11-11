@@ -19,7 +19,7 @@ const SignUpPage = () => {
   // Set role from URL parameter
   useEffect(() => {
     const roleParam = searchParams.get('role');
-    if (roleParam && ['admin', 'pharmacist'].includes(roleParam)) {
+    if (roleParam && ['admin'].includes(roleParam)) {
       setRole(roleParam);
     }
   }, [searchParams]);
@@ -63,13 +63,6 @@ const SignUpPage = () => {
       color: "blue", 
       description: "System administration & hospital approvals",
       title: "System Admin"
-    },
-    { 
-      id: "pharmacist", 
-      icon: <Package className="h-5 w-5" />, 
-      color: "purple", 
-      description: "Medication management & inventory",
-      title: "Pharmacist"
     }
   ];
 
@@ -235,16 +228,29 @@ const SignUpPage = () => {
               </Link>
             </p>
             
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-gray-600 text-sm mb-3">
-                Looking for hospital access?
-              </p>
-              <Link
-                to="/hospital-login"
-                className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                Hospital Portal
-              </Link>
+            <div className="border-t border-gray-200 pt-4 space-y-2">
+              <div>
+                <p className="text-gray-600 text-sm mb-2">
+                  Looking for hospital access?
+                </p>
+                <Link
+                  to="/hospital-login"
+                  className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Hospital Portal
+                </Link>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-2">
+                  Looking for pharmacy access?
+                </p>
+                <Link
+                  to="/pharmacy-login"
+                  className="inline-flex items-center text-purple-600 hover:text-purple-800 text-sm font-medium"
+                >
+                  Pharmacy Portal
+                </Link>
+              </div>
             </div>
           </div>
 

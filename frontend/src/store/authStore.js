@@ -34,6 +34,7 @@ export const useAuthStore = create((set) => ({
         error: null,
         isLoading: false,
       });
+      return true;
     } catch (error) {
       set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
       throw error;
@@ -50,6 +51,24 @@ export const useAuthStore = create((set) => ({
         error: null,
         isLoading: false,
       });
+      return true;
+    } catch (error) {
+      set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
+      throw error;
+    }
+  },
+
+  pharmacyAdminLogin: async (email, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.post(`${API_URL}/pharmacy-admin-login`, { email, password });
+      set({
+        isAuthenticated: true,
+        user: response.data.user,
+        error: null,
+        isLoading: false,
+      });
+      return true;
     } catch (error) {
       set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
       throw error;

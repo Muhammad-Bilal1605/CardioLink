@@ -8,6 +8,7 @@ import {
 	resetPassword,
 	checkAuth,
 	hospitalAdminLogin,
+	pharmacyAdminLogin,
 	addHospitalPersonnel,
 	getHospitalPersonnel,
 	checkEmailExists,
@@ -23,6 +24,7 @@ router.post("/login", login);
 router.post("/logout", logout);
 
 router.post("/hospital-admin-login", hospitalAdminLogin);
+router.post("/pharmacy-admin-login", pharmacyAdminLogin);
 router.post("/add-hospital-personnel", verifyToken, addHospitalPersonnel);
 router.get("/hospital-personnel", verifyToken, getHospitalPersonnel);
 router.post("/check-email", checkEmailExists);
