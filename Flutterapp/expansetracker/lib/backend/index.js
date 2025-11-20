@@ -1032,6 +1032,8 @@ import pharmacyRoutes from "./routes/pharmacyRoutes.js";
 import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 import productCategoryRoutes from "./routes/productCategoryRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
+import healthTrackerRoutes from "./routes/healthTrackerRoutes.js";
+import aiPredictionRoutes from "./routes/aiPredictionRoutes.js";
 
 // Import models for debug routes
 import { AmbulanceEmployer } from "./models/ambulanceEmployer.model.js";
@@ -1444,6 +1446,8 @@ app.use("/api/pharmacies", pharmacyRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/product-categories", productCategoryRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/health-tracker", healthTrackerRoutes);
+app.use("/api/ai-prediction", aiPredictionRoutes);
 
 // ===== DEBUG ROUTES =====
 

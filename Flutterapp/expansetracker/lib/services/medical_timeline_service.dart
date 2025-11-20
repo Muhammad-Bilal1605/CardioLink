@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/medical_event.dart';
+import '../config/api_config.dart';
 
 class MedicalTimelineService {
-  static const String baseUrl = 'http://192.168.100.8:5001';
+  static String get baseUrl => 'http://${ApiConfig.ip}:${ApiConfig.port}';
 
   // Fetch all medical events for a patient
-  static Future<List<MedicalEvent>> fetchAllPatientEvents(String patientId, {String? authToken}) async {
+  static Future<List<MedicalEvent>> fetchAllPatientEvents(String patientId,
+      {String? authToken}) async {
     try {
       print('MedicalTimelineService - Fetching events for patient: $patientId');
-      
+
       // Fetch data from all endpoints in parallel
       final futures = await Future.wait([
         _fetchVisits(patientId, authToken),
@@ -27,8 +29,9 @@ class MedicalTimelineService {
 
       // Sort by date (oldest first)
       allEvents.sort((a, b) => a.date.compareTo(b.date));
-      
-      print('MedicalTimelineService - Total events fetched: ${allEvents.length}');
+
+      print(
+          'MedicalTimelineService - Total events fetched: ${allEvents.length}');
       return allEvents;
     } catch (e) {
       print('MedicalTimelineService - Error fetching events: $e');
@@ -37,24 +40,26 @@ class MedicalTimelineService {
   }
 
   // Fetch visits
-  static Future<List<MedicalEvent>> _fetchVisits(String patientId, String? authToken) async {
+  static Future<List<MedicalEvent>> _fetchVisits(
+      String patientId, String? authToken) async {
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/visits/patient/$patientId'),
         headers: headers,
       );
 
-      print('MedicalTimelineService - Visits API response: ${response.statusCode}');
+      print(
+          'MedicalTimelineService - Visits API response: ${response.statusCode}');
       print('MedicalTimelineService - Visits response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('MedicalTimelineService - Visits data: $data');
@@ -75,7 +80,8 @@ class MedicalTimelineService {
           }).toList();
         }
       } else {
-        print('MedicalTimelineService - Visits API error: ${response.statusCode} - ${response.body}');
+        print(
+            'MedicalTimelineService - Visits API error: ${response.statusCode} - ${response.body}');
       }
       return [];
     } catch (e) {
@@ -85,24 +91,27 @@ class MedicalTimelineService {
   }
 
   // Fetch hospitalizations
-  static Future<List<MedicalEvent>> _fetchHospitalizations(String patientId, String? authToken) async {
+  static Future<List<MedicalEvent>> _fetchHospitalizations(
+      String patientId, String? authToken) async {
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/hospitalizations/patient/$patientId'),
         headers: headers,
       );
 
-      print('MedicalTimelineService - Hospitalizations API response: ${response.statusCode}');
-      print('MedicalTimelineService - Hospitalizations response body: ${response.body}');
-      
+      print(
+          'MedicalTimelineService - Hospitalizations API response: ${response.statusCode}');
+      print(
+          'MedicalTimelineService - Hospitalizations response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('MedicalTimelineService - Hospitalizations data: $data');
@@ -123,7 +132,8 @@ class MedicalTimelineService {
           }).toList();
         }
       } else {
-        print('MedicalTimelineService - Hospitalizations API error: ${response.statusCode} - ${response.body}');
+        print(
+            'MedicalTimelineService - Hospitalizations API error: ${response.statusCode} - ${response.body}');
       }
       return [];
     } catch (e) {
@@ -133,24 +143,27 @@ class MedicalTimelineService {
   }
 
   // Fetch procedures
-  static Future<List<MedicalEvent>> _fetchProcedures(String patientId, String? authToken) async {
+  static Future<List<MedicalEvent>> _fetchProcedures(
+      String patientId, String? authToken) async {
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/procedures/patient/$patientId'),
         headers: headers,
       );
 
-      print('MedicalTimelineService - Procedures API response: ${response.statusCode}');
-      print('MedicalTimelineService - Procedures response body: ${response.body}');
-      
+      print(
+          'MedicalTimelineService - Procedures API response: ${response.statusCode}');
+      print(
+          'MedicalTimelineService - Procedures response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('MedicalTimelineService - Procedures data: $data');
@@ -171,7 +184,8 @@ class MedicalTimelineService {
           }).toList();
         }
       } else {
-        print('MedicalTimelineService - Procedures API error: ${response.statusCode} - ${response.body}');
+        print(
+            'MedicalTimelineService - Procedures API error: ${response.statusCode} - ${response.body}');
       }
       return [];
     } catch (e) {
@@ -181,24 +195,26 @@ class MedicalTimelineService {
   }
 
   // Fetch labs
-  static Future<List<MedicalEvent>> _fetchLabs(String patientId, String? authToken) async {
+  static Future<List<MedicalEvent>> _fetchLabs(
+      String patientId, String? authToken) async {
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/lab-results/patient/$patientId'),
         headers: headers,
       );
 
-      print('MedicalTimelineService - Labs API response: ${response.statusCode}');
+      print(
+          'MedicalTimelineService - Labs API response: ${response.statusCode}');
       print('MedicalTimelineService - Labs response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('MedicalTimelineService - Labs data: $data');
@@ -219,7 +235,8 @@ class MedicalTimelineService {
           }).toList();
         }
       } else {
-        print('MedicalTimelineService - Labs API error: ${response.statusCode} - ${response.body}');
+        print(
+            'MedicalTimelineService - Labs API error: ${response.statusCode} - ${response.body}');
       }
       return [];
     } catch (e) {
@@ -229,24 +246,26 @@ class MedicalTimelineService {
   }
 
   // Fetch imaging
-  static Future<List<MedicalEvent>> _fetchImaging(String patientId, String? authToken) async {
+  static Future<List<MedicalEvent>> _fetchImaging(
+      String patientId, String? authToken) async {
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/imaging/patient/$patientId'),
         headers: headers,
       );
 
-      print('MedicalTimelineService - Imaging API response: ${response.statusCode}');
+      print(
+          'MedicalTimelineService - Imaging API response: ${response.statusCode}');
       print('MedicalTimelineService - Imaging response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('MedicalTimelineService - Imaging data: $data');
@@ -267,7 +286,8 @@ class MedicalTimelineService {
           }).toList();
         }
       } else {
-        print('MedicalTimelineService - Imaging API error: ${response.statusCode} - ${response.body}');
+        print(
+            'MedicalTimelineService - Imaging API error: ${response.statusCode} - ${response.body}');
       }
       return [];
     } catch (e) {

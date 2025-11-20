@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../provider/auth_provider.dart';
+import '../../../config/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../services/patient_service.dart';
@@ -31,7 +32,7 @@ class _RightRow3State extends State<RightRow3> {
 
   Future<void> _loadPatientData() async {
     if (widget.patientId == null) return;
-    
+
     setState(() {
       _loading = true;
       _error = null;
@@ -39,31 +40,31 @@ class _RightRow3State extends State<RightRow3> {
 
     try {
       print('RightRow3 - Loading patient data for: ${widget.patientId}');
-      
+
       // Get auth token from context
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final authToken = authProvider.authToken;
-      
+
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
-        Uri.parse('http://192.168.100.8:5001/api/patients/${widget.patientId}'),
+        Uri.parse('${ApiConfig.baseUrl}/patients/${widget.patientId}'),
         headers: headers,
       );
 
       print('RightRow3 - Patient data API response: ${response.statusCode}');
       print('RightRow3 - Patient data response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('RightRow3 - Patient data: $data');
-        
+
         if (data['success'] == true && data['data'] != null) {
           setState(() {
             _patientData = data['data'];
@@ -119,7 +120,8 @@ class _RightRow3State extends State<RightRow3> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.medical_information, color: Color(0xFF6B8E3D), size: 20),
+                    const Icon(Icons.medical_information,
+                        color: Color(0xFF6B8E3D), size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'Special Directives',
@@ -139,7 +141,7 @@ class _RightRow3State extends State<RightRow3> {
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: _buildContent(),
@@ -151,13 +153,16 @@ class _RightRow3State extends State<RightRow3> {
 
   void _openEditDirectivesSheet(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final patientId = widget.patientId ?? auth.currentUser?['_id'] ?? auth.currentUser?['id'];
+    final patientId =
+        widget.patientId ?? auth.currentUser?['_id'] ?? auth.currentUser?['id'];
     if (patientId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No patient selected')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No patient selected')));
       return;
     }
 
-    final existing = Map<String, dynamic>.from(_patientData?['specialDirectives'] ?? {});
+    final existing =
+        Map<String, dynamic>.from(_patientData?['specialDirectives'] ?? {});
     bool dnr = existing['dnr'] ?? false;
     bool livingWill = existing['livingWill'] ?? false;
     bool organDonor = existing['organDonor'] ?? false;
@@ -186,8 +191,12 @@ class _RightRow3State extends State<RightRow3> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Edit Special Directives', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                      Text('Edit Special Directives',
+                          style: GoogleFonts.inter(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -215,7 +224,8 @@ class _RightRow3State extends State<RightRow3> {
                       isDense: true,
                     ),
                     maxLines: 3,
-                    onChanged: (v) => setSheetState(() => religiousInstructions = v),
+                    onChanged: (v) =>
+                        setSheetState(() => religiousInstructions = v),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -224,7 +234,8 @@ class _RightRow3State extends State<RightRow3> {
                       onPressed: () async {
                         try {
                           final service = PatientService();
-                          final authP = Provider.of<AuthProvider>(context, listen: false);
+                          final authP =
+                              Provider.of<AuthProvider>(context, listen: false);
                           final payload = {
                             'dnr': dnr,
                             'livingWill': livingWill,
@@ -241,11 +252,15 @@ class _RightRow3State extends State<RightRow3> {
                               _patientData = updated;
                             });
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Special directives updated')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Special directives updated')));
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('Failed to update: $e')));
                           }
                         }
                       },
@@ -329,7 +344,8 @@ class _RightRow3State extends State<RightRow3> {
           _buildDirectiveItem('Living Will', _getLivingWillStatus()),
           const SizedBox(height: 12),
           _buildDirectiveItem('Organ Donor', _getOrganDonorStatus()),
-          if (_patientData!['specialDirectives']['religiousInstructions'] != null) ...[
+          if (_patientData!['specialDirectives']['religiousInstructions'] !=
+              null) ...[
             const SizedBox(height: 12),
             _buildReligiousInstructions(),
           ],
@@ -340,7 +356,7 @@ class _RightRow3State extends State<RightRow3> {
 
   Widget _buildDirectiveItem(String title, String status) {
     final isActive = status.toLowerCase() == 'yes';
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -356,7 +372,8 @@ class _RightRow3State extends State<RightRow3> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isActive ? const Color(0xFF3B82F6) : const Color(0xFFE2E8F0),
+              color:
+                  isActive ? const Color(0xFF3B82F6) : const Color(0xFFE2E8F0),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
@@ -383,7 +400,9 @@ class _RightRow3State extends State<RightRow3> {
                   status,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: isActive ? const Color(0xFF3B82F6) : const Color(0xFF718096),
+                    color: isActive
+                        ? const Color(0xFF3B82F6)
+                        : const Color(0xFF718096),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -428,20 +447,25 @@ class _RightRow3State extends State<RightRow3> {
   }
 
   String _getDNRStatus() {
-    if (_patientData == null || _patientData!['specialDirectives'] == null) return 'Not specified';
+    if (_patientData == null || _patientData!['specialDirectives'] == null)
+      return 'Not specified';
     final dnr = _patientData!['specialDirectives']['dnr'] ?? false;
     return dnr ? 'Yes' : 'No';
   }
 
   String _getLivingWillStatus() {
-    if (_patientData == null || _patientData!['specialDirectives'] == null) return 'Not specified';
-    final livingWill = _patientData!['specialDirectives']['livingWill'] ?? false;
+    if (_patientData == null || _patientData!['specialDirectives'] == null)
+      return 'Not specified';
+    final livingWill =
+        _patientData!['specialDirectives']['livingWill'] ?? false;
     return livingWill ? 'Yes' : 'No';
   }
 
   String _getOrganDonorStatus() {
-    if (_patientData == null || _patientData!['specialDirectives'] == null) return 'Not specified';
-    final organDonor = _patientData!['specialDirectives']['organDonor'] ?? false;
+    if (_patientData == null || _patientData!['specialDirectives'] == null)
+      return 'Not specified';
+    final organDonor =
+        _patientData!['specialDirectives']['organDonor'] ?? false;
     return organDonor ? 'Yes' : 'No';
   }
 }

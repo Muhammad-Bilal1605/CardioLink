@@ -8,6 +8,9 @@ import 'chat_screen.dart';
 import 'pharmacy_screen.dart';
 import 'ambulance_screen.dart';
 import 'ehr_screen.dart';
+import 'health_tracker_screen.dart';
+import 'ai_heart_disease_prediction_screen.dart';
+import 'simple_chat_screen.dart';
 
 class DashboardHome extends StatefulWidget {
   @override
@@ -875,6 +878,46 @@ class _DashboardHomeContent extends StatelessWidget {
   }
 
   Widget _buildQuickActionsSection() {
+    final quickActions = [
+      _QuickActionItem(
+        title: 'HeartWise AI',
+        subtitle: 'Ask your cardiac health assistant',
+        icon: Icons.favorite,
+        gradient: [Color(0xFFFF5F6D), Color(0xFFFF8A5C)],
+        onTap: (context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => SimpleChatScreen()),
+          );
+        },
+      ),
+      _QuickActionItem(
+        title: 'Health Tracker',
+        subtitle: 'Track activity, diet & medications',
+        icon: Icons.monitor_heart,
+        gradient: [Color(0xFF0BA5EC), Color(0xFF2563EB)],
+        onTap: (context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => HealthTrackerScreen()),
+          );
+        },
+      ),
+      _QuickActionItem(
+        title: 'AI Heart Disease Prediction',
+        subtitle: 'Get AI-powered risk assessment',
+        icon: Icons.auto_awesome,
+        gradient: [Color(0xFFEF4444), Color(0xFFBE123C)],
+        onTap: (context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => AIHeartDiseasePredictionScreen()),
+          );
+        },
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -887,32 +930,8 @@ class _DashboardHomeContent extends StatelessWidget {
           ),
         ),
         SizedBox(height: 15),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                'Emergency Call',
-                Icons.phone,
-                Colors.red,
-              ),
-            ),
-            SizedBox(width: 15),
-            Expanded(
-              child: _buildQuickActionCard(
-                'Find Pharmacy',
-                Icons.local_pharmacy,
-                Colors.green,
-              ),
-            ),
-            SizedBox(width: 15),
-            Expanded(
-              child: _buildQuickActionCard(
-                'Video Consult',
-                Icons.video_call,
-                Colors.blue,
-              ),
-            ),
-          ],
+        ...quickActions.map(
+          (action) => _buildQuickActionTile(context, action),
         ),
       ],
     );
@@ -1012,45 +1031,104 @@ class _DashboardHomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionCard(String title, IconData icon, Color color) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: () {
-          // Handle quick action tap
-        },
-        child: Container(
-          padding: EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: color.withOpacity(0.2), width: 1),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 24),
+  Widget _buildQuickActionTile(BuildContext context, _QuickActionItem action) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => action.onTap?.call(context),
+          child: Container(
+            padding: EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                colors: action.gradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              SizedBox(height: 10),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: color,
+              boxShadow: [
+                BoxShadow(
+                  color: action.gradient.last.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: Offset(0, 12),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.25),
+                  ),
+                  child: Icon(
+                    action.icon,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        action.title,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        action.subtitle,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 13,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _QuickActionItem {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final List<Color> gradient;
+  final void Function(BuildContext)? onTap;
+
+  _QuickActionItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.gradient,
+    this.onTap,
+  });
 }

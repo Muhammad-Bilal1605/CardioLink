@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../provider/auth_provider.dart';
+import '../../../config/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -43,43 +44,48 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
 
   Future<void> _loadVitalSigns() async {
     if (widget.patientId == null) return;
-    
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      print('RightRow2Column2 - Loading vital signs for patient: ${widget.patientId}');
-      
+      print(
+          'RightRow2Column2 - Loading vital signs for patient: ${widget.patientId}');
+
       // Get auth token from context
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final authToken = authProvider.authToken;
-      
+
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
-        Uri.parse('http://192.168.100.8:5001/api/vital-signs/patient/${widget.patientId}?limit=50'),
+        Uri.parse(
+            '${ApiConfig.baseUrl}/vital-signs/patient/${widget.patientId}?limit=50'),
         headers: headers,
       );
 
-      print('RightRow2Column2 - Vital signs API response: ${response.statusCode}');
+      print(
+          'RightRow2Column2 - Vital signs API response: ${response.statusCode}');
       print('RightRow2Column2 - Vital signs response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('RightRow2Column2 - Vital signs data: $data');
-        
-        if (data['success'] == true && data['data'] != null && (data['data'] as List).isNotEmpty) {
+
+        if (data['success'] == true &&
+            data['data'] != null &&
+            (data['data'] as List).isNotEmpty) {
           final vitals = data['data'] as List;
           final processedData = _processVitalSigns(vitals);
-          
+
           setState(() {
             _vitalData = processedData;
             _recentValues = _getRecentValues(processedData);
@@ -109,11 +115,11 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
   Map<String, dynamic> _processVitalSigns(List vitals) {
     // Group vitals by date and calculate averages
     Map<String, dynamic> groups = {};
-    
+
     for (var vital in vitals) {
       final date = DateTime.parse(vital['date']);
       final dateKey = date.toIso8601String().split('T')[0];
-      
+
       if (!groups.containsKey(dateKey)) {
         groups[dateKey] = {
           'date': dateKey,
@@ -123,61 +129,74 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
           'temperatureValues': []
         };
       }
-      
+
       // Add values to their respective arrays
       if (vital['heartRate'] != null && vital['heartRate']['value'] != null) {
         groups[dateKey]['heartRateValues'].add(vital['heartRate']['value']);
       }
-      
-      if (vital['bloodPressure'] != null && 
-          vital['bloodPressure']['systolic'] != null && 
+
+      if (vital['bloodPressure'] != null &&
+          vital['bloodPressure']['systolic'] != null &&
           vital['bloodPressure']['diastolic'] != null) {
         groups[dateKey]['bloodPressureValues'].add({
           'systolic': vital['bloodPressure']['systolic'],
           'diastolic': vital['bloodPressure']['diastolic']
         });
       }
-      
-      if (vital['oxygenSaturation'] != null && vital['oxygenSaturation']['value'] != null) {
+
+      if (vital['oxygenSaturation'] != null &&
+          vital['oxygenSaturation']['value'] != null) {
         groups[dateKey]['oxygenValues'].add(vital['oxygenSaturation']['value']);
       }
-      
-      if (vital['temperature'] != null && vital['temperature']['value'] != null) {
+
+      if (vital['temperature'] != null &&
+          vital['temperature']['value'] != null) {
         groups[dateKey]['temperatureValues'].add(vital['temperature']['value']);
       }
     }
-    
+
     // Calculate averages for each date
     List<Map<String, dynamic>> result = [];
     groups.values.forEach((group) {
       // Calculate heart rate average
       int? heartRateAvg;
       if (group['heartRateValues'].isNotEmpty) {
-        heartRateAvg = (group['heartRateValues'].reduce((a, b) => a + b) / group['heartRateValues'].length).round();
+        heartRateAvg = (group['heartRateValues'].reduce((a, b) => a + b) /
+                group['heartRateValues'].length)
+            .round();
       }
-      
+
       // Calculate blood pressure average
       String? bloodPressureAvg;
       if (group['bloodPressureValues'].isNotEmpty) {
-        final systolicSum = group['bloodPressureValues'].map((v) => v['systolic']).reduce((a, b) => a + b);
-        final diastolicSum = group['bloodPressureValues'].map((v) => v['diastolic']).reduce((a, b) => a + b);
-        final systolicAvg = (systolicSum / group['bloodPressureValues'].length).round();
-        final diastolicAvg = (diastolicSum / group['bloodPressureValues'].length).round();
+        final systolicSum = group['bloodPressureValues']
+            .map((v) => v['systolic'])
+            .reduce((a, b) => a + b);
+        final diastolicSum = group['bloodPressureValues']
+            .map((v) => v['diastolic'])
+            .reduce((a, b) => a + b);
+        final systolicAvg =
+            (systolicSum / group['bloodPressureValues'].length).round();
+        final diastolicAvg =
+            (diastolicSum / group['bloodPressureValues'].length).round();
         bloodPressureAvg = '$systolicAvg/$diastolicAvg';
       }
-      
+
       // Calculate oxygen average
       int? oxygenAvg;
       if (group['oxygenValues'].isNotEmpty) {
-        oxygenAvg = (group['oxygenValues'].reduce((a, b) => a + b) / group['oxygenValues'].length).round();
+        oxygenAvg = (group['oxygenValues'].reduce((a, b) => a + b) /
+                group['oxygenValues'].length)
+            .round();
       }
-      
+
       // Calculate temperature average
       double? temperatureAvg;
       if (group['temperatureValues'].isNotEmpty) {
-        temperatureAvg = (group['temperatureValues'].reduce((a, b) => a + b) / group['temperatureValues'].length);
+        temperatureAvg = (group['temperatureValues'].reduce((a, b) => a + b) /
+            group['temperatureValues'].length);
       }
-      
+
       result.add({
         'date': group['date'],
         'heartRate': heartRateAvg,
@@ -186,26 +205,44 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
         'temperature': temperatureAvg
       });
     });
-    
+
     // Sort by date and take last 7 days
-    result.sort((a, b) => DateTime.parse(a['date']).compareTo(DateTime.parse(b['date'])));
-    final recentVitals = result.length > 7 ? result.sublist(result.length - 7) : result;
-    
+    result.sort((a, b) =>
+        DateTime.parse(a['date']).compareTo(DateTime.parse(b['date'])));
+    final recentVitals =
+        result.length > 7 ? result.sublist(result.length - 7) : result;
+
     return {
-      'heartRate': recentVitals.map((v) => v['heartRate']).where((v) => v != null).toList(),
-      'bloodPressure': recentVitals.map((v) => v['bloodPressure']).where((v) => v != null).toList(),
-      'oxygen': recentVitals.map((v) => v['oxygen']).where((v) => v != null).toList(),
-      'temperature': recentVitals.map((v) => v['temperature']).where((v) => v != null).toList(),
+      'heartRate': recentVitals
+          .map((v) => v['heartRate'])
+          .where((v) => v != null)
+          .toList(),
+      'bloodPressure': recentVitals
+          .map((v) => v['bloodPressure'])
+          .where((v) => v != null)
+          .toList(),
+      'oxygen':
+          recentVitals.map((v) => v['oxygen']).where((v) => v != null).toList(),
+      'temperature': recentVitals
+          .map((v) => v['temperature'])
+          .where((v) => v != null)
+          .toList(),
       'dates': recentVitals.map((v) => v['date']).toList()
     };
   }
 
   Map<String, dynamic> _getRecentValues(Map<String, dynamic> data) {
     return {
-      'heartRate': data['heartRate'].isNotEmpty ? '${data['heartRate'].last} bpm' : 'N/A',
-      'bloodPressure': data['bloodPressure'].isNotEmpty ? '${data['bloodPressure'].last} mmHg' : 'N/A',
+      'heartRate': data['heartRate'].isNotEmpty
+          ? '${data['heartRate'].last} bpm'
+          : 'N/A',
+      'bloodPressure': data['bloodPressure'].isNotEmpty
+          ? '${data['bloodPressure'].last} mmHg'
+          : 'N/A',
       'oxygen': data['oxygen'].isNotEmpty ? '${data['oxygen'].last} %' : 'N/A',
-      'temperature': data['temperature'].isNotEmpty ? '${data['temperature'].last} °C' : 'N/A'
+      'temperature': data['temperature'].isNotEmpty
+          ? '${data['temperature'].last} °C'
+          : 'N/A'
     };
   }
 
@@ -275,7 +312,7 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: _buildContent(),
@@ -356,27 +393,52 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
 
   Widget _buildVitalCards() {
     final vitalTypes = [
-      {'key': 'heartRate', 'label': 'Heart Rate', 'icon': Icons.favorite, 'color': Colors.red},
-      {'key': 'bloodPressure', 'label': 'BP', 'icon': Icons.monitor_heart, 'color': Colors.blue},
-      {'key': 'oxygen', 'label': 'SpO₂', 'icon': Icons.water_drop, 'color': Colors.purple},
-      {'key': 'temperature', 'label': 'Temp', 'icon': Icons.thermostat, 'color': Colors.orange},
+      {
+        'key': 'heartRate',
+        'label': 'Heart Rate',
+        'icon': Icons.favorite,
+        'color': Colors.red
+      },
+      {
+        'key': 'bloodPressure',
+        'label': 'BP',
+        'icon': Icons.monitor_heart,
+        'color': Colors.blue
+      },
+      {
+        'key': 'oxygen',
+        'label': 'SpO₂',
+        'icon': Icons.water_drop,
+        'color': Colors.purple
+      },
+      {
+        'key': 'temperature',
+        'label': 'Temp',
+        'icon': Icons.thermostat,
+        'color': Colors.orange
+      },
     ];
 
     return Row(
       children: vitalTypes.map((vital) {
         final isSelected = _selectedVital == vital['key'];
-        
+
         return Expanded(
           child: GestureDetector(
-            onTap: () => setState(() => _selectedVital = vital['key'] as String),
+            onTap: () =>
+                setState(() => _selectedVital = vital['key'] as String),
             child: Container(
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? (vital['color'] as Color).withOpacity(0.1) : const Color(0xFFF7FAFC),
+                color: isSelected
+                    ? (vital['color'] as Color).withOpacity(0.1)
+                    : const Color(0xFFF7FAFC),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? vital['color'] as Color : const Color(0xFFE2E8F0),
+                  color: isSelected
+                      ? vital['color'] as Color
+                      : const Color(0xFFE2E8F0),
                   width: isSelected ? 2 : 1,
                 ),
               ),
@@ -424,7 +486,7 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
 
   Widget _buildChartPlaceholder() {
     final selectedData = _vitalData[_selectedVital] as List;
-    
+
     if (selectedData.isEmpty) {
       return Container(
         height: 200,
@@ -498,7 +560,15 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
           sampleData = [72, 75, 78, 76, 74, 77, 80];
           break;
         case 'bloodPressure':
-          sampleData = ['120/80', '125/82', '118/78', '122/79', '124/81', '119/77', '121/80'];
+          sampleData = [
+            '120/80',
+            '125/82',
+            '118/78',
+            '122/79',
+            '124/81',
+            '119/77',
+            '121/80'
+          ];
           break;
         case 'oxygen':
           sampleData = [98, 97, 99, 98, 97, 98, 99];
@@ -509,7 +579,7 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
         default:
           sampleData = [50, 55, 52, 58, 54, 57, 60];
       }
-      
+
       return CustomPaint(
         painter: SimpleLineChartPainter(
           data: sampleData,
@@ -518,7 +588,7 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
         ),
       );
     }
-    
+
     return CustomPaint(
       painter: SimpleLineChartPainter(
         data: data,
@@ -545,7 +615,7 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
 
   Widget _buildMetrics() {
     final selectedData = _vitalData[_selectedVital] as List;
-    
+
     if (selectedData.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -632,7 +702,8 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
       final avgDia = (dia.reduce((a, b) => a + b) / dia.length).round();
       return '$avgSys/$avgDia mmHg';
     } else if (_selectedVital == 'temperature') {
-      final avg = (data.reduce((a, b) => a + b) / data.length).toStringAsFixed(1);
+      final avg =
+          (data.reduce((a, b) => a + b) / data.length).toStringAsFixed(1);
       return '$avg °C';
     } else {
       final avg = (data.reduce((a, b) => a + b) / data.length).round();
@@ -656,7 +727,7 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
   String _getStatus(List data) {
     if (data.isEmpty) return 'N/A';
     final lastValue = data.last;
-    
+
     switch (_selectedVital) {
       case 'heartRate':
         final rate = lastValue as int;
@@ -684,7 +755,6 @@ class _RightRow2Column2State extends State<RightRow2Column2> {
         return 'N/A';
     }
   }
-
 }
 
 // Custom painter for professional horizontal line chart
@@ -729,8 +799,9 @@ class SimpleLineChartPainter extends CustomPainter {
 
     // Calculate points
     final points = <Offset>[];
-    final double stepX = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2;
-    
+    final double stepX =
+        data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2;
+
     // Get min and max values for scaling
     double minValue, maxValue;
     if (vitalType == 'bloodPressure') {
@@ -738,8 +809,12 @@ class SimpleLineChartPainter extends CustomPainter {
       minValue = sysValues.reduce((a, b) => a < b ? a : b);
       maxValue = sysValues.reduce((a, b) => a > b ? a : b);
     } else {
-      minValue = data.map((v) => v is int ? v.toDouble() : v as double).reduce((a, b) => a < b ? a : b);
-      maxValue = data.map((v) => v is int ? v.toDouble() : v as double).reduce((a, b) => a > b ? a : b);
+      minValue = data
+          .map((v) => v is int ? v.toDouble() : v as double)
+          .reduce((a, b) => a < b ? a : b);
+      maxValue = data
+          .map((v) => v is int ? v.toDouble() : v as double)
+          .reduce((a, b) => a > b ? a : b);
     }
 
     // Add padding to the range
@@ -770,7 +845,7 @@ class SimpleLineChartPainter extends CustomPainter {
       } else {
         value = data[i] is int ? data[i].toDouble() : data[i] as double;
       }
-      
+
       final x = padding + (i * stepX);
       final normalizedValue = (value - minValue) / (maxValue - minValue);
       final y = topPadding + chartHeight - (normalizedValue * chartHeight);
@@ -782,11 +857,11 @@ class SimpleLineChartPainter extends CustomPainter {
       final path = Path();
       path.moveTo(points.first.dx, size.height - padding);
       path.lineTo(points.first.dx, points.first.dy);
-      
+
       for (int i = 1; i < points.length; i++) {
         path.lineTo(points[i].dx, points[i].dy);
       }
-      
+
       path.lineTo(points.last.dx, size.height - padding);
       path.close();
       canvas.drawPath(path, fillPaint);
@@ -796,11 +871,11 @@ class SimpleLineChartPainter extends CustomPainter {
     if (points.length > 1) {
       final linePath = Path();
       linePath.moveTo(points.first.dx, points.first.dy);
-      
+
       for (int i = 1; i < points.length; i++) {
         linePath.lineTo(points[i].dx, points[i].dy);
       }
-      
+
       canvas.drawPath(linePath, linePaint);
     }
 
@@ -823,11 +898,11 @@ class SimpleLineChartPainter extends CustomPainter {
 
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
-      
+
       // Draw point
       canvas.drawCircle(point, 5, pointPaint);
       canvas.drawCircle(point, 5, pointBorderPaint);
-      
+
       // Draw value above point
       String valueText;
       if (vitalType == 'bloodPressure') {
@@ -837,14 +912,14 @@ class SimpleLineChartPainter extends CustomPainter {
       } else {
         valueText = data[i].toString();
       }
-      
+
       final textSpan = TextSpan(text: valueText, style: textStyle);
       final textPainter = TextPainter(
         text: textSpan,
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      
+
       // Position text above the point
       final textOffset = Offset(
         point.dx - textPainter.width / 2,

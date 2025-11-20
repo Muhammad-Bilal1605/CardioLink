@@ -19,13 +19,16 @@ import 'patient_requestsAmbulance_screen.dart';
 import 'ambulance_map_screen.dart';
 import 'login_screen.dart';
 import 'dashboard_components.dart';
+import 'health_tracker_screen.dart';
+import 'ai_heart_disease_prediction_screen.dart';
 
 class DashboardHome extends StatefulWidget {
   @override
   _DashboardHomeState createState() => _DashboardHomeState();
 }
 
-class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateMixin {
+class _DashboardHomeState extends State<DashboardHome>
+    with TickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _animationController;
   late Animation<double> _fabAnimation;
@@ -101,7 +104,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     return Scaffold(
       backgroundColor: Color(0xFFF5F6FA),
       body: _patientScreens[_selectedIndex],
-      floatingActionButton: _selectedIndex == 2 ? _buildEnhancedVideoCallFab() : null,
+      floatingActionButton:
+          _selectedIndex == 2 ? _buildEnhancedVideoCallFab() : null,
       bottomNavigationBar: _buildEnhancedBottomNavBar(),
     );
   }
@@ -130,7 +134,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                     // Requests Tab
                     PatientRequestsAmbulanceScreen(),
                     // Map Tab - Full screen map with API integration
-                    AmbulanceMapScreen(requestData: null), // Let it fetch from API
+                    AmbulanceMapScreen(
+                        requestData: null), // Let it fetch from API
                   ],
                 ),
               ),
@@ -261,7 +266,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                       ),
                     ),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Color(0xFF22C55E),
                         borderRadius: BorderRadius.circular(20),
@@ -404,7 +410,9 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
             setState(() {
               _selectedIndex = index;
               if (index == 2) {
-                _animationController.forward().then((_) => _animationController.reverse());
+                _animationController
+                    .forward()
+                    .then((_) => _animationController.reverse());
               }
             });
           },
@@ -432,7 +440,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  BottomNavigationBarItem _buildBottomNavItem(IconData icon, String label, int index) {
+  BottomNavigationBarItem _buildBottomNavItem(
+      IconData icon, String label, int index) {
     return BottomNavigationBarItem(
       icon: Container(
         padding: EdgeInsets.all(8),
@@ -565,13 +574,16 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                                     ),
                                     SizedBox(height: 4),
                                     Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
                                         color: Color(0xFFD1FAE5),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        authProvider.isAmbulanceEmployer ? 'Ambulance Employer' : 'Patient',
+                                        authProvider.isAmbulanceEmployer
+                                            ? 'Ambulance Employer'
+                                            : 'Patient',
                                         style: GoogleFonts.inter(
                                           fontSize: 10,
                                           color: Color(0xFF16A34A),
@@ -594,7 +606,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Profile editing coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Profile editing coming soon!');
                       },
                     ),
                     _buildSettingsItem(
@@ -603,7 +616,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Notification settings coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Notification settings coming soon!');
                       },
                     ),
                     _buildSettingsItem(
@@ -612,7 +626,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Privacy settings coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Privacy settings coming soon!');
                       },
                     ),
                     _buildSettingsItem(
@@ -621,7 +636,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Help & support coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Help & support coming soon!');
                       },
                     ),
                     SizedBox(height: 20),
@@ -665,7 +681,8 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
     );
   }
 
-  Widget _buildSettingsItem(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildSettingsItem(
+      String title, IconData icon, Color color, VoidCallback onTap) {
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       child: Material(
@@ -733,58 +750,59 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
   Future<void> _handleLogout(BuildContext context) async {
     try {
       bool shouldLogout = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(
-              'Logout',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1E1E1E),
-              ),
-            ),
-            content: Text(
-              'Are you sure you want to logout from your account?',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.inter(
-                    color: Color(0xFF6B7280),
-                    fontWeight: FontWeight.w500,
-                  ),
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFDC2626),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
+                title: Text(
                   'Logout',
                   style: GoogleFonts.inter(
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E1E1E),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
-      ) ?? false;
+                content: Text(
+                  'Are you sure you want to logout from your account?',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.inter(
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Logout',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ) ??
+          false;
 
       if (!shouldLogout) return;
 
@@ -845,7 +863,7 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
           MaterialPageRoute(builder: (context) => LoginScreen()),
           (Route<dynamic> route) => false,
         );
-        
+
         _showAwesomeSnackBar(context, 'Logged out successfully');
       } else {
         final errorSnackBar = SnackBar(
@@ -860,7 +878,6 @@ class _DashboardHomeState extends State<DashboardHome> with TickerProviderStateM
         );
         ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
       }
-
     } catch (e) {
       print('Logout error: $e');
       Navigator.of(context).pop(); // Close loading dialog if open
@@ -919,15 +936,20 @@ class _EnhancedAmbulanceEmployerDashboardContent extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.0,
       children: [
-        _buildStatCard('Active Rides', '5', 'ongoing', Icons.local_shipping, Color(0xFF16A34A)),
-        _buildStatCard('Pending', '12', 'requests', Icons.pending_actions, Color(0xFFF59E0B)),
-        _buildStatCard('Completed', '23', 'today', Icons.check_circle, Color(0xFF2563EB)),
-        _buildStatCard('Revenue', '\$1,240', 'this week', Icons.attach_money, Color(0xFF8B5CF6)),
+        _buildStatCard('Active Rides', '5', 'ongoing', Icons.local_shipping,
+            Color(0xFF16A34A)),
+        _buildStatCard('Pending', '12', 'requests', Icons.pending_actions,
+            Color(0xFFF59E0B)),
+        _buildStatCard(
+            'Completed', '23', 'today', Icons.check_circle, Color(0xFF2563EB)),
+        _buildStatCard('Revenue', '\$1,240', 'this week', Icons.attach_money,
+            Color(0xFF8B5CF6)),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, String subtitle, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, String subtitle, IconData icon, Color color) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1028,9 +1050,24 @@ class _EnhancedAmbulanceEmployerDashboardContent extends StatelessWidget {
 
   List<Widget> _buildAmbulanceList() {
     final ambulances = [
-      {'id': 'AMB-001', 'status': 'En Route', 'driver': 'John Smith', 'color': Color(0xFF16A34A)},
-      {'id': 'AMB-002', 'status': 'Available', 'driver': 'Sarah Wilson', 'color': Color(0xFF2563EB)},
-      {'id': 'AMB-003', 'status': 'En Route', 'driver': 'Mike Johnson', 'color': Color(0xFF16A34A)},
+      {
+        'id': 'AMB-001',
+        'status': 'En Route',
+        'driver': 'John Smith',
+        'color': Color(0xFF16A34A)
+      },
+      {
+        'id': 'AMB-002',
+        'status': 'Available',
+        'driver': 'Sarah Wilson',
+        'color': Color(0xFF2563EB)
+      },
+      {
+        'id': 'AMB-003',
+        'status': 'En Route',
+        'driver': 'Mike Johnson',
+        'color': Color(0xFF16A34A)
+      },
     ];
 
     return ambulances.map((ambulance) {
@@ -1138,9 +1175,24 @@ class _EnhancedAmbulanceEmployerDashboardContent extends StatelessWidget {
 
   List<Widget> _buildRequestList() {
     final requests = [
-      {'patient': 'Sarah Johnson', 'type': 'Heart Attack', 'time': '5 min ago', 'status': 'Pending'},
-      {'patient': 'Mike Wilson', 'type': 'Accident', 'time': '12 min ago', 'status': 'Accepted'},
-      {'patient': 'Emily Davis', 'type': 'Emergency', 'time': '20 min ago', 'status': 'Completed'},
+      {
+        'patient': 'Sarah Johnson',
+        'type': 'Heart Attack',
+        'time': '5 min ago',
+        'status': 'Pending'
+      },
+      {
+        'patient': 'Mike Wilson',
+        'type': 'Accident',
+        'time': '12 min ago',
+        'status': 'Accepted'
+      },
+      {
+        'patient': 'Emily Davis',
+        'type': 'Emergency',
+        'time': '20 min ago',
+        'status': 'Completed'
+      },
     ];
 
     return requests.map((request) {
@@ -1394,7 +1446,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Color(0xFFD1FAE5),
                           borderRadius: BorderRadius.circular(8),
@@ -1429,15 +1482,20 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.0,
       children: [
-        _buildStatCard('Heart Rate', '72', 'BPM', Icons.favorite, Color(0xFFDC2626), true),
-        _buildStatCard('Blood Pressure', '120/80', 'mmHg', Icons.opacity, Color(0xFF16A34A), false),
-        _buildStatCard('Steps Today', '8,542', 'steps', Icons.directions_walk, Color(0xFFF59E0B), false),
-        _buildStatCard('Sleep', '7h 20m', 'last night', Icons.nightlight_round, Color(0xFF8B5CF6), false),
+        _buildStatCard(
+            'Heart Rate', '72', 'BPM', Icons.favorite, Color(0xFFDC2626), true),
+        _buildStatCard('Blood Pressure', '120/80', 'mmHg', Icons.opacity,
+            Color(0xFF16A34A), false),
+        _buildStatCard('Steps Today', '8,542', 'steps', Icons.directions_walk,
+            Color(0xFFF59E0B), false),
+        _buildStatCard('Sleep', '7h 20m', 'last night', Icons.nightlight_round,
+            Color(0xFF8B5CF6), false),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, String subtitle, IconData icon, Color color, bool isAnimated) {
+  Widget _buildStatCard(String title, String value, String subtitle,
+      IconData icon, Color color, bool isAnimated) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1776,7 +1834,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                     ),
                     SizedBox(height: 8),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Color(0xFFD1FAE5),
                         borderRadius: BorderRadius.circular(8),
@@ -1784,7 +1843,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.access_time, color: Color(0xFF16A34A), size: 14),
+                          Icon(Icons.access_time,
+                              color: Color(0xFF16A34A), size: 14),
                           SizedBox(width: 6),
                           Text(
                             'Tomorrow, 10:30 AM',
@@ -1822,6 +1882,12 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
         SizedBox(height: 16),
         // Prominent HeartWise AI Card
         _buildHeartWiseAICard(),
+        SizedBox(height: 12),
+        // New Health Tracker Card
+        _buildHealthTrackerCard(),
+        SizedBox(height: 12),
+        // AI Heart Disease Prediction Card
+        _buildAIHeartDiseasePredictionCard(),
         SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -1832,12 +1898,206 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
           childAspectRatio: 0.8,
           children: [
             _buildQuickAction(Icons.emergency, 'Emergency', Color(0xFFDC2626)),
-            _buildQuickAction(Icons.video_call, 'Video Call', Color(0xFF16A34A)),
-            _buildQuickAction(Icons.local_pharmacy, 'Pharmacy', Color(0xFF2563EB)),
-            _buildQuickAction(Icons.local_hospital, 'Ambulance', Color(0xFFF59E0B)),
+            _buildQuickAction(
+                Icons.video_call, 'Video Call', Color(0xFF16A34A)),
+            _buildQuickAction(
+                Icons.local_pharmacy, 'Pharmacy', Color(0xFF2563EB)),
+            _buildQuickAction(
+                Icons.local_hospital, 'Ambulance', Color(0xFFF59E0B)),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildHealthTrackerCard() {
+    return Builder(
+      builder: (BuildContext context) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => HealthTrackerScreen()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF3B82F6).withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.monitor_heart_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Health Tracker',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Track activity, diet & medications',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withOpacity(0.95),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAIHeartDiseasePredictionCard() {
+    return Builder(
+      builder: (BuildContext context) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => AIHeartDiseasePredictionScreen()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFFDC2626).withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.favorite,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AI Heart Disease Prediction',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Get AI-powered risk assessment',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withOpacity(0.95),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1936,47 +2196,56 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickAction(IconData icon, String label, Color color) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {},
-        child: Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Color(0xFFE5E7EB)),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 18),
+ Widget _buildQuickAction(IconData icon, String label, Color color) {
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {},
+      splashColor: color.withOpacity(0.1),
+      highlightColor: color.withOpacity(0.05),
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              SizedBox(height: 6),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
+              child: Icon(icon, color: color, size: 20),
+            ),
+            SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showPatientSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -2074,7 +2343,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                                     ),
                                     SizedBox(height: 4),
                                     Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
                                         color: Color(0xFFD1FAE5),
                                         borderRadius: BorderRadius.circular(6),
@@ -2103,7 +2373,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Profile editing coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Profile editing coming soon!');
                       },
                     ),
                     _buildSettingsItem(
@@ -2112,7 +2383,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Notification settings coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Notification settings coming soon!');
                       },
                     ),
                     _buildSettingsItem(
@@ -2121,7 +2393,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Privacy settings coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Privacy settings coming soon!');
                       },
                     ),
                     _buildSettingsItem(
@@ -2130,7 +2403,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
                       Color(0xFF16A34A),
                       () {
                         Navigator.pop(context);
-                        _showAwesomeSnackBar(context, 'Help & support coming soon!');
+                        _showAwesomeSnackBar(
+                            context, 'Help & support coming soon!');
                       },
                     ),
                     SizedBox(height: 20),
@@ -2174,7 +2448,8 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsItem(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildSettingsItem(
+      String title, IconData icon, Color color, VoidCallback onTap) {
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       child: Material(
@@ -2240,8 +2515,6 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    // Implementation similar to the main logout method
-    // This would handle logout for the patient dashboard
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();
     Navigator.pushAndRemoveUntil(

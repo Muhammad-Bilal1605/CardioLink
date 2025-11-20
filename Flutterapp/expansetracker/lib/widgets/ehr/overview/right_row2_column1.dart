@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../provider/auth_provider.dart';
+import '../../../config/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../services/patient_service.dart';
@@ -40,42 +41,44 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
 
   Future<void> _loadAllergies() async {
     if (widget.patientId == null) return;
-    
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      print('RightRow2Column1 - Loading allergies for patient: ${widget.patientId}');
-      
+      print(
+          'RightRow2Column1 - Loading allergies for patient: ${widget.patientId}');
+
       // Get auth token from context
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final authToken = authProvider.authToken;
-      
+
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      
+
       if (authToken != null) {
         headers['Authorization'] = 'Bearer $authToken';
       }
-      
+
       final response = await http.get(
-        Uri.parse('http://192.168.100.8:5001/api/patients/${widget.patientId}'),
+        Uri.parse('${ApiConfig.baseUrl}/patients/${widget.patientId}'),
         headers: headers,
       );
 
-      print('RightRow2Column1 - Allergies API response: ${response.statusCode}');
+      print(
+          'RightRow2Column1 - Allergies API response: ${response.statusCode}');
       print('RightRow2Column1 - Allergies response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('RightRow2Column1 - Allergies data: $data');
-        
+
         if (data['success'] == true && data['data'] != null) {
           final patient = data['data'];
-          
+
           setState(() {
             if (patient['allergies'] != null) {
               _allergyData = {
@@ -84,11 +87,7 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
                 'food': patient['allergies']['food'] ?? []
               };
             } else {
-              _allergyData = {
-                'medicinal': [],
-                'environmental': [],
-                'food': []
-              };
+              _allergyData = {'medicinal': [], 'environmental': [], 'food': []};
             }
             _loading = false;
           });
@@ -120,7 +119,8 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
   }
 
   bool _hasAllergies() {
-    return _allergyData.values.any((category) => category is List && category.isNotEmpty);
+    return _allergyData.values
+        .any((category) => category is List && category.isNotEmpty);
   }
 
   String _formatCategoryName(String category) {
@@ -183,7 +183,7 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: _buildContent(),
@@ -195,9 +195,11 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
 
   void _openAddAllergySheet(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final patientId = widget.patientId ?? auth.currentUser?['_id'] ?? auth.currentUser?['id'];
+    final patientId =
+        widget.patientId ?? auth.currentUser?['_id'] ?? auth.currentUser?['id'];
     if (patientId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No patient selected')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No patient selected')));
       return;
     }
 
@@ -232,48 +234,67 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Add Allergy', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                      Text('Add Allergy',
+                          style: GoogleFonts.inter(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context)),
                     ],
                   ),
                   const SizedBox(height: 12),
                   // Category
                   InputDecorator(
-                    decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, labelText: 'Category'),
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        labelText: 'Category'),
                     child: DropdownButton<String>(
                       value: form['category'] as String,
                       isExpanded: true,
                       underline: const SizedBox.shrink(),
                       items: const [
-                        DropdownMenuItem(value: 'medicinal', child: Text('Medicinal')),
-                        DropdownMenuItem(value: 'environmental', child: Text('Environmental')),
+                        DropdownMenuItem(
+                            value: 'medicinal', child: Text('Medicinal')),
+                        DropdownMenuItem(
+                            value: 'environmental',
+                            child: Text('Environmental')),
                         DropdownMenuItem(value: 'food', child: Text('Food')),
                       ],
-                      onChanged: (v) => setSheetState(() => form['category'] = v ?? 'medicinal'),
+                      onChanged: (v) => setSheetState(
+                          () => form['category'] = v ?? 'medicinal'),
                     ),
                   ),
                   const SizedBox(height: 8),
                   // Fields
-                  _textField('Name', form['name'] as String, (v) => setSheetState(() => form['name'] = v)),
+                  _textField('Name', form['name'] as String,
+                      (v) => setSheetState(() => form['name'] = v)),
                   const SizedBox(height: 8),
-                  _textField('Reaction', form['reaction'] as String, (v) => setSheetState(() => form['reaction'] = v)),
+                  _textField('Reaction', form['reaction'] as String,
+                      (v) => setSheetState(() => form['reaction'] = v)),
                   const SizedBox(height: 8),
                   InputDecorator(
-                    decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, labelText: 'Criticality'),
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        labelText: 'Criticality'),
                     child: DropdownButton<String>(
                       value: form['criticality'] as String,
                       isExpanded: true,
                       underline: const SizedBox.shrink(),
                       items: const [
                         DropdownMenuItem(value: 'Low', child: Text('Low')),
-                        DropdownMenuItem(value: 'Medium', child: Text('Medium')),
+                        DropdownMenuItem(
+                            value: 'Medium', child: Text('Medium')),
                         DropdownMenuItem(value: 'High', child: Text('High')),
                       ],
-                      onChanged: (v) => setSheetState(() => form['criticality'] = v ?? 'Medium'),
+                      onChanged: (v) => setSheetState(
+                          () => form['criticality'] = v ?? 'Medium'),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _textField('Notes', form['notes'] as String, (v) => setSheetState(() => form['notes'] = v)),
+                  _textField('Notes', form['notes'] as String,
+                      (v) => setSheetState(() => form['notes'] = v)),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -281,17 +302,23 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
                       onPressed: () async {
                         // Basic validation
                         if ((form['name'] as String).trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Name is required')));
                           return;
                         }
                         try {
-                          final auth = Provider.of<AuthProvider>(context, listen: false);
+                          final auth =
+                              Provider.of<AuthProvider>(context, listen: false);
                           final service = PatientService();
                           // Merge new allergy into existing structure
                           final current = {
-                            'medicinal': List<Map<String, dynamic>>.from(_allergyData['medicinal'] ?? []),
-                            'environmental': List<Map<String, dynamic>>.from(_allergyData['environmental'] ?? []),
-                            'food': List<Map<String, dynamic>>.from(_allergyData['food'] ?? []),
+                            'medicinal': List<Map<String, dynamic>>.from(
+                                _allergyData['medicinal'] ?? []),
+                            'environmental': List<Map<String, dynamic>>.from(
+                                _allergyData['environmental'] ?? []),
+                            'food': List<Map<String, dynamic>>.from(
+                                _allergyData['food'] ?? []),
                           };
                           final category = form['category'] as String;
                           current[category]!.add({
@@ -308,17 +335,24 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
                           if (mounted) {
                             setState(() {
                               _allergyData = {
-                                'medicinal': updated['allergies']?['medicinal'] ?? current['medicinal'],
-                                'environmental': updated['allergies']?['environmental'] ?? current['environmental'],
-                                'food': updated['allergies']?['food'] ?? current['food'],
+                                'medicinal': updated['allergies']
+                                        ?['medicinal'] ??
+                                    current['medicinal'],
+                                'environmental': updated['allergies']
+                                        ?['environmental'] ??
+                                    current['environmental'],
+                                'food': updated['allergies']?['food'] ??
+                                    current['food'],
                               };
                             });
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Allergy added')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Allergy added')));
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add: $e')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to add: $e')));
                           }
                         }
                       },
@@ -341,7 +375,8 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
     );
   }
 
-  Widget _textField(String label, String initialValue, ValueChanged<String> onChanged) {
+  Widget _textField(
+      String label, String initialValue, ValueChanged<String> onChanged) {
     return TextFormField(
       initialValue: initialValue,
       decoration: const InputDecoration(
@@ -411,9 +446,9 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
         children: _allergyData.entries.map((entry) {
           final category = entry.key;
           final items = entry.value as List;
-          
+
           if (items.isEmpty) return const SizedBox.shrink();
-          
+
           return _buildCategorySection(category, items);
         }).toList(),
       ),
@@ -422,7 +457,7 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
 
   Widget _buildCategorySection(String category, List items) {
     final isExpanded = _expandedCategories[category] ?? false;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -465,7 +500,8 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE2E8F0),
                       borderRadius: BorderRadius.circular(10),
@@ -483,13 +519,15 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
               ),
             ),
           ),
-          
+
           // Category items
           if (isExpanded)
             Container(
               padding: const EdgeInsets.all(12),
               child: Column(
-                children: items.map<Widget>((item) => _buildAllergyItem(item)).toList(),
+                children: items
+                    .map<Widget>((item) => _buildAllergyItem(item))
+                    .toList(),
               ),
             ),
         ],
@@ -500,7 +538,7 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
   Widget _buildAllergyItem(Map<String, dynamic> item) {
     final criticality = item['criticality'] ?? 'Unknown';
     final criticalityColor = _getCriticalityColor(criticality);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -523,7 +561,8 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
                     color: const Color(0xFF2D3748),
                   ),
                 ),
-                if (item['reaction'] != null && item['reaction'].isNotEmpty) ...[
+                if (item['reaction'] != null &&
+                    item['reaction'].isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Reaction: ${item['reaction']}',
@@ -573,7 +612,8 @@ class _RightRow2Column1State extends State<RightRow2Column1> {
     );
   }
 
-  Widget _buildActivityItem(String title, String doctor, String date, IconData icon) {
+  Widget _buildActivityItem(
+      String title, String doctor, String date, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
