@@ -1034,6 +1034,8 @@ import productCategoryRoutes from "./routes/productCategoryRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import healthTrackerRoutes from "./routes/healthTrackerRoutes.js";
 import aiPredictionRoutes from "./routes/aiPredictionRoutes.js";
+import automaticPrescriptionRoutes from "./routes/automaticPrescriptionRoutes.js";
+import automaticPrescriptionOrderRoutes from "./routes/automaticPrescriptionOrderRoutes.js";
 
 // Import models for debug routes
 import { AmbulanceEmployer } from "./models/ambulanceEmployer.model.js";
@@ -1448,6 +1450,8 @@ app.use("/api/product-categories", productCategoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/health-tracker", healthTrackerRoutes);
 app.use("/api/ai-prediction", aiPredictionRoutes);
+app.use("/api/automatic-prescription", automaticPrescriptionRoutes);
+app.use("/api/automatic-prescription-orders", automaticPrescriptionOrderRoutes);
 
 // ===== DEBUG ROUTES =====
 

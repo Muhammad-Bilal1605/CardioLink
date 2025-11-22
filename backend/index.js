@@ -13,6 +13,9 @@ import http from "http";
 import { Server } from "socket.io";
 import pkg from 'agora-access-token';
 const { RtcTokenBuilder, RtcRole } = pkg;
+import automaticPrescriptionRoutes from "./routes/automaticPrescriptionRoutes.js";
+import automaticPrescriptionOrderRoutes from "./routes/automaticPrescriptionOrderRoutes.js";
+
 
 import { connectDB } from "./db/connectDB.js";
 
@@ -857,6 +860,8 @@ const loadMedicalRoutes = async () => {
     app.use('/api/products', productRoutes.default);
     app.use('/api/inventory', inventoryRoutes.default);
     app.use('/api/orders', orderRoutes.default);
+    app.use("/api/automatic-prescription", automaticPrescriptionRoutes);
+    app.use("/api/automatic-prescription-orders", automaticPrescriptionOrderRoutes);
     
     console.log('Medical routes loaded successfully');
     console.log('Pharmacy system routes loaded successfully');

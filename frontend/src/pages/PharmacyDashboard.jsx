@@ -20,6 +20,7 @@ import ProductManagement from './pharmacy/ProductManagement';
 import InventoryManagement from './pharmacy/InventoryManagement';
 import OrderManagement from './pharmacy/OrderManagement';
 import PharmacyOverview from './pharmacy/PharmacyOverview';
+import AutomaticPrescriptionOrders from './pharmacy/AutomaticPrescriptionOrders';
 
 const PharmacyDashboard = () => {
   const navigate = useNavigate();
@@ -67,6 +68,12 @@ const PharmacyDashboard = () => {
       path: '/pharmacy-dashboard/orders',
       icon: ShoppingCart,
       badge: notifications.newOrdersCount || null
+    },
+    {
+      name: 'Auto Prescriptions',
+      path: '/pharmacy-dashboard/auto-prescriptions',
+      icon: Pill,
+      badge: null
     }
   ];
 
@@ -188,6 +195,7 @@ const PharmacyDashboard = () => {
             <Route path="products/*" element={<ProductManagement />} />
             <Route path="inventory/*" element={<InventoryManagement />} />
             <Route path="orders/*" element={<OrderManagement />} />
+            <Route path="auto-prescriptions" element={<AutomaticPrescriptionOrders />} />
           </Routes>
         </div>
       </div>

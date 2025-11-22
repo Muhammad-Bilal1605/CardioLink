@@ -21,6 +21,8 @@ import 'login_screen.dart';
 import 'dashboard_components.dart';
 import 'health_tracker_screen.dart';
 import 'ai_heart_disease_prediction_screen.dart';
+import 'predictorbilal.dart';
+import '../services/automatic_prescription_service.dart';
 
 class DashboardHome extends StatefulWidget {
   @override
@@ -1888,6 +1890,12 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
         SizedBox(height: 12),
         // AI Heart Disease Prediction Card
         _buildAIHeartDiseasePredictionCard(),
+        SizedBox(height: 12),
+        // Framingham Risk Predictor Card
+        _buildFraminghamPredictorCard(),
+        SizedBox(height: 12),
+        // Automatic Prescription Card
+        _buildAutomaticPrescriptionCard(),
         SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -2098,6 +2106,213 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFraminghamPredictorCard() {
+    return Builder(
+      builder: (BuildContext context) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => FraminghamPredictorScreen()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF8B5CF6).withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.analytics_outlined,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Framingham Risk Score',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Calculate 10-year CVD risk',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withOpacity(0.95),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAutomaticPrescriptionCard() {
+    return Builder(
+      builder: (BuildContext context) {
+        return Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  _showAutomaticPrescriptionSettings(context, authProvider);
+                },
+                child: Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF10B981).withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.medication_liquid,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Auto Prescription',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Automatic medication ordering',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withOpacity(0.95),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.settings,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAutomaticPrescriptionSettings(BuildContext context, AuthProvider authProvider) {
+    final patientId = authProvider.userId;
+    if (patientId.isEmpty) {
+      _showAwesomeSnackBar(context, 'Patient ID not found. Please login again.');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AutomaticPrescriptionSettingsSheet(patientId: patientId),
     );
   }
 
@@ -2521,6 +2736,376 @@ class _EnhancedDashboardHomeContent extends StatelessWidget {
       context,
       MaterialPageRoute(builder: (context) => LoginScreen()),
       (Route<dynamic> route) => false,
+    );
+  }
+}
+
+class _AutomaticPrescriptionSettingsSheet extends StatefulWidget {
+  final String patientId;
+
+  const _AutomaticPrescriptionSettingsSheet({required this.patientId});
+
+  @override
+  _AutomaticPrescriptionSettingsSheetState createState() => _AutomaticPrescriptionSettingsSheetState();
+}
+
+class _AutomaticPrescriptionSettingsSheetState extends State<_AutomaticPrescriptionSettingsSheet> {
+  bool _isLoading = true;
+  bool _isSaving = false;
+  bool _facilityAvailed = false;
+  String? _selectedPharmacyId;
+  String? _selectedPharmacyName;
+  int _preferredDosage = 1;
+  List<Map<String, dynamic>> _pharmacies = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    setState(() => _isLoading = true);
+
+    // Load pharmacies and settings in parallel
+    final pharmaciesResult = await AutomaticPrescriptionService.getAvailablePharmacies();
+    final settingsResult = await AutomaticPrescriptionService.getAutomaticPrescription(widget.patientId);
+
+    setState(() {
+      if (pharmaciesResult['success'] == true) {
+        _pharmacies = List<Map<String, dynamic>>.from(pharmaciesResult['data'] ?? []);
+      }
+
+      if (settingsResult['success'] == true) {
+        final data = settingsResult['data'];
+        _facilityAvailed = data['facilityAvailed'] ?? false;
+        _preferredDosage = data['preferredDosage'] ?? 1;
+        
+        if (data['preferredPharmacy'] != null) {
+          if (data['preferredPharmacy'] is String) {
+            _selectedPharmacyId = data['preferredPharmacy'];
+          } else if (data['preferredPharmacy'] is Map) {
+            _selectedPharmacyId = data['preferredPharmacy']['_id'] ?? data['preferredPharmacy']['id'];
+            _selectedPharmacyName = data['preferredPharmacy']['pharmacyName'];
+          }
+        }
+      }
+
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    if (_facilityAvailed && _selectedPharmacyId == null) {
+      _showSnackBar('Please select a preferred pharmacy', isError: true);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    final result = await AutomaticPrescriptionService.updateAutomaticPrescription(
+      patientId: widget.patientId,
+      facilityAvailed: _facilityAvailed,
+      preferredPharmacy: _facilityAvailed ? _selectedPharmacyId : null,
+      preferredDosage: _facilityAvailed ? _preferredDosage : 1,
+    );
+
+    setState(() => _isSaving = false);
+
+    if (result['success'] == true) {
+      _showSnackBar('Settings saved successfully!');
+      Navigator.pop(context);
+    } else {
+      _showSnackBar(result['message'] ?? 'Failed to save settings', isError: true);
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Color(0xFFE5E7EB),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Text(
+                  'Auto Prescription Settings',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E1E1E),
+                  ),
+                ),
+                Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: Color(0xFF6B7280)),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? Center(
+                    child: SpinKitFadingCircle(
+                      color: Color(0xFF16A34A),
+                      size: 40.0,
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Facility Availed Toggle
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(0xFFE5E7EB)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Enable Auto Prescription',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E1E1E),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Automatically order medications when doctor prescribes',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _facilityAvailed,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _facilityAvailed = value;
+                                    if (!value) {
+                                      _selectedPharmacyId = null;
+                                      _selectedPharmacyName = null;
+                                      _preferredDosage = 1;
+                                    }
+                                  });
+                                },
+                                activeColor: Color(0xFF16A34A),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 20),
+
+                        // Preferred Pharmacy Selection (only if facility is availed)
+                        if (_facilityAvailed) ...[
+                          Text(
+                            'Preferred Pharmacy',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E1E1E),
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFFE5E7EB)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedPharmacyId,
+                                isExpanded: true,
+                                hint: Text(
+                                  'Select a pharmacy',
+                                  style: GoogleFonts.inter(
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                                items: _pharmacies.map((pharmacy) {
+                                  final id = pharmacy['_id'] ?? pharmacy['id'];
+                                  final name = pharmacy['pharmacyName'] ?? 'Unknown Pharmacy';
+                                  final address = pharmacy['address'];
+                                  String addressStr = '';
+                                  if (address is Map) {
+                                    final parts = [
+                                      address['street'],
+                                      address['area'],
+                                      address['city'],
+                                    ].where((p) => p != null && p.toString().isNotEmpty).toList();
+                                    addressStr = parts.isNotEmpty ? ' - ${parts.join(', ')}' : '';
+                                  }
+
+                                  return DropdownMenuItem<String>(
+                                    value: id,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF1E1E1E),
+                                          ),
+                                        ),
+                                        if (addressStr.isNotEmpty)
+                                          Text(
+                                            addressStr,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: Color(0xFF6B7280),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedPharmacyId = value;
+                                    final selected = _pharmacies.firstWhere(
+                                      (p) => (p['_id'] ?? p['id']) == value,
+                                      orElse: () => {},
+                                    );
+                                    _selectedPharmacyName = selected['pharmacyName'];
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 20),
+
+                          // Preferred Dosage Selection
+                          Text(
+                            'Preferred Dosage (Months)',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E1E1E),
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFFE5E7EB)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                value: _preferredDosage,
+                                isExpanded: true,
+                                items: List.generate(12, (index) => index + 1).map((month) {
+                                  return DropdownMenuItem<int>(
+                                    value: month,
+                                    child: Text(
+                                      '$month ${month == 1 ? 'Month' : 'Months'}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Color(0xFF1E1E1E),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _preferredDosage = value ?? 1;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                        ],
+
+                        // Save Button
+                        Container(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isSaving ? null : _saveSettings,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF16A34A),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: _isSaving
+                                ? SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    'Save Settings',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

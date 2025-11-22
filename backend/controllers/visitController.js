@@ -2,6 +2,7 @@ import Visit from '../models/Visit.js';
 import Patient from '../models/User.js';
 import { User } from '../models/user.model.js';
 import Medication from '../models/Medication.js';
+import { createAutomaticOrderFromVisit } from './automaticPrescriptionOrderController.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -254,11 +255,39 @@ export const createVisit = async (req, res) => {
     const visit = new Visit(visitData);
     await visit.save();
 
+    // Check for automatic prescription and create order if applicable
+    let automaticOrder = null;
+    if (parsedPrescribedMedicines && parsedPrescribedMedicines.length > 0) {
+      try {
+        const orderResult = await createAutomaticOrderFromVisit(
+          visit._id,
+          patientId,
+          user._id,
+          parsedPrescribedMedicines
+        );
+        
+        if (orderResult.success) {
+          automaticOrder = orderResult.data;
+          console.log('✅ Automatic prescription order created:', automaticOrder.orderNumber);
+        } else {
+          console.log('ℹ️ Automatic prescription order not created:', orderResult.message);
+        }
+      } catch (error) {
+        console.error('❌ Error creating automatic prescription order:', error);
+        // Don't fail the visit creation if automatic order fails
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: {
         visit,
-        medications: createdMedications
+        medications: createdMedications,
+        automaticOrder: automaticOrder ? {
+          orderNumber: automaticOrder.orderNumber,
+          status: automaticOrder.orderStatus,
+          pharmacy: automaticOrder.pharmacy
+        } : null
       }
     });
   } catch (error) {
