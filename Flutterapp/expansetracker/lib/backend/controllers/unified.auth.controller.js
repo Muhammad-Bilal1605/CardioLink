@@ -1,8 +1,16 @@
 // unified.auth.controller.js
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import mongoose from "mongoose";
 import Patient  from "../models/User.js";
 import { AmbulanceEmployer } from "../models/ambulanceEmployer.model.js";
+import {
+  sendVerificationEmail,
+  sendWelcomeEmail,
+  sendPasswordResetEmail,
+  sendResetSuccessEmail,
+} from "../mailtrap/emails.js";
 
 // Generate JWT token for patients
 const generatePatientToken = (patientId) => {
@@ -116,7 +124,11 @@ export const patientSignup = async (req, res) => {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Create new patient
+    // Generate verification token (6-digit code)
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationTokenExpiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    // Create new patient (not verified yet)
     const newPatient = new Patient({
       email,
       password: hashedPassword,
@@ -131,7 +143,9 @@ export const patientSignup = async (req, res) => {
       emergencyContact,
       medicalHistory,
       currentMedications,
-      isVerified: true,
+      isVerified: false,
+      verificationToken,
+      verificationTokenExpiresAt,
       lastLogin: new Date()
     });
 
@@ -139,15 +153,20 @@ export const patientSignup = async (req, res) => {
 
     console.log("✅ Patient created successfully:", newPatient._id);
 
-    // Generate token and set cookie
-    const token = generatePatientToken(newPatient._id);
-    setPatientCookie(res, token);
+    // Send verification email
+    try {
+      await sendVerificationEmail(newPatient.email, verificationToken);
+      console.log("✅ Verification email sent to:", newPatient.email);
+    } catch (emailError) {
+      console.error("❌ Error sending verification email:", emailError);
+      // Don't fail signup if email fails, but log it
+    }
 
     res.status(201).json({
       success: true,
-      message: "Patient account created successfully",
+      message: "Patient account created. Please verify your email to continue.",
       userType: "patient",
-      token: token,
+      requiresVerification: true,
       user: {
         id: newPatient._id,
         name: `${newPatient.firstName} ${newPatient.lastName}`.trim(),
@@ -349,11 +368,19 @@ export const patientLogin = async (req, res) => {
       });
     }
 
-    // Check if account is verified (optional check)
-    if (patient.isVerified === false) {
+    // List of emails that bypass verification check (existing accounts)
+    const bypassVerificationEmails = [
+      'faizanmkhan@gmail.com',
+      'new2@gmail.com',
+      'new1@gmail.com'
+    ];
+
+    // Check if account is verified (skip check for existing accounts)
+    if (patient.isVerified === false && !bypassVerificationEmails.includes(email.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: "Account not verified. Please contact support."
+        message: "Account not verified. Please verify your email to continue.",
+        requiresVerification: true
       });
     }
 
@@ -491,6 +518,367 @@ export const ambulanceEmployerLogin = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error during login"
+    });
+  }
+};
+
+// VERIFY EMAIL (for patients)
+export const verifyPatientEmail = async (req, res) => {
+  try {
+    const { code, email } = req.body;
+
+    if (!code || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification code and email are required"
+      });
+    }
+
+    const patient = await Patient.findOne({
+      email,
+      verificationToken: code,
+      verificationTokenExpiresAt: { $gt: Date.now() }
+    });
+
+    if (!patient) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification code"
+      });
+    }
+
+    // Mark as verified and clear verification token
+    patient.isVerified = true;
+    patient.verificationToken = undefined;
+    patient.verificationTokenExpiresAt = undefined;
+    await patient.save();
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(patient.email, `${patient.firstName} ${patient.lastName}`.trim());
+    } catch (emailError) {
+      console.error("❌ Error sending welcome email:", emailError);
+    }
+
+    // Generate token and set cookie
+    const token = generatePatientToken(patient._id);
+    setPatientCookie(res, token);
+
+    console.log("✅ Patient email verified:", patient._id);
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      token: token,
+      userType: "patient",
+      patient: {
+        id: patient._id,
+        name: `${patient.firstName} ${patient.lastName}`.trim(),
+        firstName: patient.firstName,
+        lastName: patient.lastName,
+        email: patient.email,
+        phoneNumber: patient.phoneNumber,
+        gender: patient.gender,
+        age: patient.age,
+        dateOfBirth: patient.dateOfBirth,
+        bloodType: patient.bloodType,
+        allergies: patient.allergies,
+        emergencyContact: patient.emergencyContact,
+        medicalHistory: patient.medicalHistory,
+        currentMedications: patient.currentMedications,
+        isVerified: patient.isVerified,
+        lastLogin: patient.lastLogin
+      }
+    });
+  } catch (error) {
+    console.error("❌ Email verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error verifying email"
+    });
+  }
+};
+
+// FORGOT PASSWORD (for patients)
+export const forgotPatientPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required"
+      });
+    }
+
+    // Check if mongoose is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: "Database connection unavailable. Please try again later."
+      });
+    }
+
+    let patient;
+    try {
+      patient = await Patient.findOne({ email });
+    } catch (dbError) {
+      console.error("❌ Database query error:", dbError);
+      
+      // Check if it's a connection error
+      if (dbError.name === 'MongoServerSelectionError' || 
+          dbError.message.includes('ENOTFOUND') ||
+          dbError.message.includes('connection')) {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection error. Please check your MongoDB connection and try again."
+        });
+      }
+      
+      // Re-throw other errors
+      throw dbError;
+    }
+
+    if (!patient) {
+      // Don't reveal if email exists for security
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists with this email, a password reset link has been sent"
+      });
+    }
+
+    // Generate 6-digit verification code for password reset
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetCodeExpiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    patient.resetPasswordToken = resetCode; // Store code as token
+    patient.resetPasswordExpiresAt = resetCodeExpiresAt;
+    
+    try {
+      await patient.save();
+    } catch (saveError) {
+      console.error("❌ Error saving reset code:", saveError);
+      return res.status(500).json({
+        success: false,
+        message: "Error processing password reset request"
+      });
+    }
+
+    // Send password reset verification code email
+    try {
+      await sendPasswordResetEmail(patient.email, resetCode);
+      console.log("✅ Password reset verification code sent to:", patient.email);
+    } catch (emailError) {
+      console.error("❌ Error sending password reset email:", emailError);
+      // Still return success since the code was saved
+      // User can request another email if needed
+      return res.status(200).json({
+        success: true,
+        message: "Password reset code generated. Email sending failed, please try again or contact support."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "If an account exists with this email, a password reset code has been sent"
+    });
+  } catch (error) {
+    console.error("❌ Forgot password error:", error);
+    
+    // Provide more specific error messages
+    if (error.name === 'MongoServerSelectionError') {
+      return res.status(503).json({
+        success: false,
+        message: "Database connection error. Please check your MongoDB connection."
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: "Error processing password reset request"
+    });
+  }
+};
+
+// VERIFY PASSWORD RESET CODE (for patients)
+export const verifyPasswordResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and verification code are required"
+      });
+    }
+
+    // Check if mongoose is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: "Database connection unavailable. Please try again later."
+      });
+    }
+
+    let patient;
+    try {
+      patient = await Patient.findOne({
+        email,
+        resetPasswordToken: code,
+        resetPasswordExpiresAt: { $gt: Date.now() }
+      });
+    } catch (dbError) {
+      console.error("❌ Database query error:", dbError);
+      
+      // Check if it's a connection error
+      if (dbError.name === 'MongoServerSelectionError' || 
+          dbError.message.includes('ENOTFOUND') ||
+          dbError.message.includes('connection')) {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection error. Please check your MongoDB connection and try again."
+        });
+      }
+      
+      // Re-throw other errors
+      throw dbError;
+    }
+
+    if (!patient) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification code"
+      });
+    }
+
+    // Code is valid, return success (code will be used in reset password step)
+    res.status(200).json({
+      success: true,
+      message: "Verification code is valid"
+    });
+  } catch (error) {
+    console.error("❌ Verify password reset code error:", error);
+    
+    // Provide more specific error messages
+    if (error.name === 'MongoServerSelectionError') {
+      return res.status(503).json({
+        success: false,
+        message: "Database connection error. Please check your MongoDB connection."
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: "Error verifying reset code"
+    });
+  }
+};
+
+// RESET PASSWORD (for patients) - Now uses code instead of token
+export const resetPatientPassword = async (req, res) => {
+  try {
+    const { email, code, password } = req.body;
+
+    if (!email || !code || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, verification code, and password are required"
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long"
+      });
+    }
+
+    // Check if mongoose is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: "Database connection unavailable. Please try again later."
+      });
+    }
+
+    let patient;
+    try {
+      patient = await Patient.findOne({
+        email,
+        resetPasswordToken: code,
+        resetPasswordExpiresAt: { $gt: Date.now() }
+      });
+    } catch (dbError) {
+      console.error("❌ Database query error:", dbError);
+      
+      // Check if it's a connection error
+      if (dbError.name === 'MongoServerSelectionError' || 
+          dbError.message.includes('ENOTFOUND') ||
+          dbError.message.includes('connection')) {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection error. Please check your MongoDB connection and try again."
+        });
+      }
+      
+      // Re-throw other errors
+      throw dbError;
+    }
+
+    if (!patient) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification code"
+      });
+    }
+
+    // Update password
+    const hashedPassword = await bcryptjs.hash(password, 12);
+    patient.password = hashedPassword;
+    patient.resetPasswordToken = undefined;
+    patient.resetPasswordExpiresAt = undefined;
+    
+    try {
+      await patient.save();
+    } catch (saveError) {
+      console.error("❌ Error saving new password:", saveError);
+      return res.status(500).json({
+        success: false,
+        message: "Error resetting password"
+      });
+    }
+
+    // Send success email
+    try {
+      await sendResetSuccessEmail(patient.email);
+    } catch (emailError) {
+      console.error("❌ Error sending reset success email:", emailError);
+      // Don't fail the request if email fails
+    }
+
+    console.log("✅ Patient password reset successfully:", patient._id);
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successful"
+    });
+  } catch (error) {
+    console.error("❌ Reset password error:", error);
+    
+    // Provide more specific error messages
+    if (error.name === 'MongoServerSelectionError') {
+      return res.status(503).json({
+        success: false,
+        message: "Database connection error. Please check your MongoDB connection."
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: "Error resetting password"
     });
   }
 };

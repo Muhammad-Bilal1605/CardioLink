@@ -213,14 +213,36 @@ class AuthProvider with ChangeNotifier {
           return false;
         }
 
-        _currentUser = userData;
-        _userType = 'patient';
-        _authToken = responseData['token'] ?? 'patient_token'; // Use token from response if available
-        
-        print('Patient signup successful');
-        
-        notifyListeners();
-        return true;
+        // Check if verification is required
+        if (responseData['requiresVerification'] == true) {
+          // Store user data temporarily (not authenticated yet)
+          _currentUser = userData;
+          _userType = 'patient';
+          // Don't set auth token yet - user needs to verify email first
+          _authToken = null;
+          
+          print('Patient signup successful - verification required');
+          print('Verification code sent to: ${userData['email']}');
+          
+          // Save email for verification
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('pending_verification_email', userData['email']);
+          
+          notifyListeners();
+          return true; // Return true but user needs to verify
+        } else {
+          // Old flow - auto-verified
+          _currentUser = userData;
+          _userType = 'patient';
+          _authToken = responseData['token'] ?? 'patient_token';
+          
+          await _saveAuthData();
+          
+          print('Patient signup successful');
+          
+          notifyListeners();
+          return true;
+        }
       } else {
         final errorMsg = responseData['error'] ?? responseData['message'] ?? 'Patient signup failed';
         print('Patient signup failed: $errorMsg');
@@ -401,6 +423,12 @@ class AuthProvider with ChangeNotifier {
           
           notifyListeners();
           return true;
+        }
+      } else if (response.statusCode == 400) {
+        final responseData = json.decode(response.body);
+        if (responseData['requiresVerification'] == true) {
+          _setError('Account not verified. Please verify your email to continue.');
+          return false;
         }
       }
 
@@ -935,6 +963,255 @@ Future<bool> ambulanceEmployerLogin({
     } catch (e) {
       print('Error resetting server config: $e');
       _setError('Failed to reset server configuration: $e');
+    }
+  }
+
+  // VERIFY EMAIL
+  Future<bool> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
+
+      final currentBaseUrl = baseUrl;
+      print('Starting email verification for: $email');
+      print('Using API URL: $currentBaseUrl');
+
+      final response = await http.post(
+        Uri.parse('$currentBaseUrl/auth/patient/verify-email'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+          'code': code,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      print('Verification response status: ${response.statusCode}');
+      print('Verification response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        print('Empty response body received');
+        _setError('Server returned empty response');
+        return false;
+      }
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final userData = responseData['patient'];
+        
+        if (userData == null) {
+          print('No user data in successful response');
+          _setError('Invalid response format from server');
+          return false;
+        }
+
+        _currentUser = userData;
+        _userType = 'patient';
+        _authToken = responseData['token'];
+        
+        // Clear pending verification email
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('pending_verification_email');
+        
+        // Save to SharedPreferences
+        await _saveAuthData();
+        
+        print('Email verification successful');
+        
+        notifyListeners();
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Email verification failed';
+        print('Email verification failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('Email verification exception: $e');
+      _setError(_getNetworkErrorMessage(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // FORGOT PASSWORD
+  Future<bool> forgotPassword({
+    required String email,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
+
+      final currentBaseUrl = baseUrl;
+      print('Starting forgot password for: $email');
+      print('Using API URL: $currentBaseUrl');
+
+      final response = await http.post(
+        Uri.parse('$currentBaseUrl/auth/patient/forgot-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      print('Forgot password response status: ${response.statusCode}');
+      print('Forgot password response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        print('Empty response body received');
+        _setError('Server returned empty response');
+        return false;
+      }
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        print('Forgot password request successful');
+        // Don't set error, just return success
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Failed to send password reset email';
+        print('Forgot password failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('Forgot password exception: $e');
+      _setError(_getNetworkErrorMessage(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // VERIFY PASSWORD RESET CODE
+  Future<bool> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
+
+      final currentBaseUrl = baseUrl;
+      print('Starting password reset code verification for: $email');
+      print('Using API URL: $currentBaseUrl');
+
+      final response = await http.post(
+        Uri.parse('$currentBaseUrl/auth/patient/verify-reset-code'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+          'code': code,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      print('Verify reset code response status: ${response.statusCode}');
+      print('Verify reset code response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        print('Empty response body received');
+        _setError('Server returned empty response');
+        return false;
+      }
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        print('Password reset code verified successfully');
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Invalid or expired verification code';
+        print('Password reset code verification failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('Verify password reset code exception: $e');
+      _setError(_getNetworkErrorMessage(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // RESET PASSWORD (with code)
+  Future<bool> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    try {
+      _setLoading(true);
+      _setError(null);
+
+      final currentBaseUrl = baseUrl;
+      print('Starting password reset');
+      print('Using API URL: $currentBaseUrl');
+
+      final response = await http.post(
+        Uri.parse('$currentBaseUrl/auth/patient/reset-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+          'code': code,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      print('Reset password response status: ${response.statusCode}');
+      print('Reset password response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        print('Empty response body received');
+        _setError('Server returned empty response');
+        return false;
+      }
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        print('Password reset successful');
+        return true;
+      } else {
+        final errorMsg = responseData['message'] ?? 'Password reset failed';
+        print('Password reset failed: $errorMsg');
+        _setError(errorMsg);
+        return false;
+      }
+    } catch (e) {
+      print('Password reset exception: $e');
+      _setError(_getNetworkErrorMessage(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get pending verification email
+  Future<String?> getPendingVerificationEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('pending_verification_email');
+    } catch (e) {
+      print('❌ Error getting pending verification email: $e');
+      return null;
     }
   }
 

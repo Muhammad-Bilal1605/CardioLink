@@ -49,10 +49,10 @@ export const sendWelcomeEmail = async (email, name) => {
   await sendEmail(email, "Welcome to CardioLink!", html, text);
 };
 
-// Send Password Reset Email
-export const sendPasswordResetEmail = async (email, resetURL) => {
-  const text = `Click the following link to reset your password: ${resetURL}`;
-  const html = PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetURL}", resetURL);
+// Send Password Reset Email (with code)
+export const sendPasswordResetEmail = async (email, resetCode) => {
+  const text = `Your password reset code is: ${resetCode}`;
+  const html = PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetCode}", resetCode);
   await sendEmail(email, "Reset your password", html, text);
 };
 

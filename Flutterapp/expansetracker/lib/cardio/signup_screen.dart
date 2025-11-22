@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
 import 'login_screen.dart';
 import 'dashboard_home.dart';
+import 'email_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -359,11 +360,27 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       print('Signup result: $success');
 
       if (success && mounted) {
+        // Check if verification is required
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final pendingEmail = await authProvider.getPendingVerificationEmail();
+        
+        if (pendingEmail != null) {
+          // Navigate to verification screen
+          print('Navigating to verification screen...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EmailVerificationScreen(email: pendingEmail),
+            ),
+          );
+        } else {
+          // Account already verified or no verification needed
         print('Navigating to dashboard...');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => DashboardHome()),
         );
+        }
       } else {
         print('Signup failed or widget not mounted');
       }

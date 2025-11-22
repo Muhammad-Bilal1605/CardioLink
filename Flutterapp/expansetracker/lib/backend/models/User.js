@@ -151,6 +151,26 @@ const patientSchema = new mongoose.Schema({
       default: false
     }
   },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: {
+    type: String
+  },
+  verificationTokenExpiresAt: {
+    type: Date
+  },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpiresAt: {
+    type: Date
+  },
+  lastLogin: {
+    type: Date,
+    default: Date.now
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -132,4 +132,157 @@ class AuthService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      print('🔄 AuthService verifyEmail with URL: $baseUrl');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/patient/verify-email'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'code': code,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        // Save token and user data
+        final prefs = await SharedPreferences.getInstance();
+        if (responseData['token'] != null) {
+          await prefs.setString('token', responseData['token']);
+        }
+        if (responseData['patient'] != null) {
+          await prefs.setString('user', jsonEncode(responseData['patient']));
+        }
+        
+        print('✅ AuthService verifyEmail successful');
+        return {'success': true, 'data': responseData};
+      } else {
+        print('❌ AuthService verifyEmail failed: ${responseData['message']}');
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Email verification failed'
+        };
+      }
+    } catch (e) {
+      print('❌ AuthService verifyEmail exception: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+  }) async {
+    try {
+      print('🔄 AuthService forgotPassword with URL: $baseUrl');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/patient/forgot-password'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        print('✅ AuthService forgotPassword successful');
+        return {'success': true, 'message': responseData['message'] ?? 'Password reset email sent'};
+      } else {
+        print('❌ AuthService forgotPassword failed: ${responseData['message']}');
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Failed to send password reset email'
+        };
+      }
+    } catch (e) {
+      print('❌ AuthService forgotPassword exception: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      print('🔄 AuthService verifyPasswordResetCode with URL: $baseUrl');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/patient/verify-reset-code'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'code': code,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        print('✅ AuthService verifyPasswordResetCode successful');
+        return {'success': true, 'message': responseData['message'] ?? 'Verification code is valid'};
+      } else {
+        print('❌ AuthService verifyPasswordResetCode failed: ${responseData['message']}');
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Invalid verification code'
+        };
+      }
+    } catch (e) {
+      print('❌ AuthService verifyPasswordResetCode exception: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    try {
+      print('🔄 AuthService resetPassword with URL: $baseUrl');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/patient/reset-password'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'code': code,
+          'password': password,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        print('✅ AuthService resetPassword successful');
+        return {'success': true, 'message': responseData['message'] ?? 'Password reset successful'};
+      } else {
+        print('❌ AuthService resetPassword failed: ${responseData['message']}');
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Password reset failed'
+        };
+      }
+    } catch (e) {
+      print('❌ AuthService resetPassword exception: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
