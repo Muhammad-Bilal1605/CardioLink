@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Upload, FileAudio, Heart, CheckCircle, AlertCircle, Loader2, AudioWaveform, Music, Volume2 } from 'lucide-react';
+import { Upload, FileAudio, Heart, CheckCircle, AlertCircle, Loader2, AudioWaveform, Music, Download } from 'lucide-react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuthStore } from '../../store/authStore';
+import jsPDF from 'jspdf';
 
 const HeartbeatAnalyzer = () => {
   const [file, setFile] = useState(null);
@@ -52,51 +53,260 @@ const HeartbeatAnalyzer = () => {
     startProcessing(uploadedFile);
   };
 
+  const getAudioMetadata = async (file) => {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      audio.src = url;
+      
+      audio.addEventListener('loadedmetadata', () => {
+        const duration = audio.duration;
+        URL.revokeObjectURL(url);
+        resolve({
+          duration: duration ? `${duration.toFixed(1)} seconds` : "Unknown",
+          sampleRate: "44.1 kHz", // Default, API doesn't return this
+          quality: "High Quality",
+          format: "WAV"
+        });
+      });
+      
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(url);
+        resolve({
+          duration: "Unknown",
+          sampleRate: "44.1 kHz",
+          quality: "High Quality",
+          format: "WAV"
+        });
+      });
+    });
+  };
+
+  const predictHeartbeat = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('http://localhost:5016/predict', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  };
+
   const startProcessing = async (uploadedFile) => {
-    setProcessingStage('uploading');
-    
-    // Simulate upload
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setProcessingStage('accessing');
-    
-    // Simulate accessing audio
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setProcessingStage('processing');
-    
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Mock results
-    const mockResults = {
-      condition: Math.random() > 0.5 ? 'Normal' : 'Abnormal',
-      confidence: Math.floor(Math.random() * 20) + 80,
-      bpm: Math.floor(Math.random() * 40) + 60,
-      details: Math.random() > 0.5 ? 
-        'Regular heart rhythm detected. No significant abnormalities found.' :
-        'Irregular heart rhythm detected. Recommend consultation with a cardiologist.',
-      timestamp: new Date().toLocaleString(),
-      audioMetrics: {
-        duration: "45.2 seconds",
-        sampleRate: "44.1 kHz",
-        quality: "High Quality",
-        format: "WAV"
-      },
-      analysis: {
-        rhythmType: Math.random() > 0.5 ? 'Sinus Rhythm' : 'Irregular Rhythm',
-        murmurDetected: Math.random() > 0.7 ? 'Yes' : 'No',
-        s1s2Clarity: Math.random() > 0.3 ? 'Clear' : 'Muffled',
-        backgroundNoise: Math.random() > 0.6 ? 'Minimal' : 'Moderate'
-      }
-    };
-    
-    setResults(mockResults);
-    setProcessingStage('complete');
+    try {
+      setFileError(null);
+      setProcessingStage('uploading');
+      
+      // Get audio metadata
+      const audioMetrics = await getAudioMetadata(uploadedFile);
+      setProcessingStage('accessing');
+      
+      // Small delay for UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setProcessingStage('processing');
+      
+      // Call the API
+      const apiResponse = await predictHeartbeat(uploadedFile);
+      
+      // Format results based on API response
+      // API returns probability of "Abnormal" (0-1)
+      const abnormalProbability = apiResponse.probability || 0;
+      const prediction = apiResponse.prediction || 'Unknown';
+      const isNormal = prediction === 'Normal';
+      // Calculate confidence: if Normal, use (1 - prob), if Abnormal, use prob
+      const confidence = Math.round((isNormal ? (1 - abnormalProbability) : abnormalProbability) * 100);
+      
+      // Medical advice based on prediction
+      const advice = isNormal
+        ? {
+            message: 'Your heartbeat analysis shows normal results. However, if you experience any symptoms like chest pain, shortness of breath, dizziness, or irregular heartbeat, please consult with a healthcare professional immediately.',
+            recommendations: [
+              'Continue regular health checkups',
+              'Maintain a healthy lifestyle with regular exercise',
+              'Monitor your heart health regularly',
+              'If you notice any changes or symptoms, seek medical attention'
+            ]
+          }
+        : {
+            message: 'Your heartbeat analysis indicates abnormal patterns. It is strongly recommended that you consult with a cardiologist or visit a hospital for a comprehensive evaluation.',
+            recommendations: [
+              'Schedule an appointment with a cardiologist as soon as possible',
+              'If experiencing chest pain, shortness of breath, or severe symptoms, go to the emergency room immediately',
+              'Avoid strenuous activities until evaluated by a healthcare professional',
+              'Keep a record of any symptoms you experience',
+              'Follow up with your primary care physician'
+            ]
+          };
+      
+      const results = {
+        condition: prediction,
+        confidence: confidence,
+        timestamp: new Date().toLocaleString(),
+        audioMetrics: audioMetrics,
+        advice: advice
+      };
+      
+      setResults(results);
+      setProcessingStage('complete');
+    } catch (error) {
+      console.error('Error processing heartbeat:', error);
+      setFileError(error.message || 'Failed to process heartbeat audio. Please try again.');
+      setProcessingStage('idle');
+      setFile(null);
+      setResults(null);
+    }
   };
 
   const resetAnalysis = () => {
     setFile(null);
     setProcessingStage('idle');
     setResults(null);
+  };
+
+  const generatePDFReport = () => {
+    if (!results) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 20;
+    const margin = 20;
+    const lineHeight = 7;
+    const sectionSpacing = 10;
+
+    // Colors
+    const primaryColor = results.condition === 'Normal' ? [76, 175, 80] : [255, 152, 0];
+    const bgColor = results.condition === 'Normal' ? [232, 245, 233] : [255, 243, 224];
+
+    // Header
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Heartbeat Analysis Report', margin, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${results.timestamp}`, margin, 35);
+
+    yPosition = 50;
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+
+    // Analysis Result Section
+    doc.setFillColor(...bgColor);
+    doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 35, 3, 3, 'F');
+    
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Analysis Result', margin + 5, yPosition + 10);
+    
+    doc.setFontSize(20);
+    doc.setTextColor(...primaryColor);
+    doc.text(results.condition, margin + 5, yPosition + 20);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Confidence: ${results.confidence}%`, margin + 5, yPosition + 28);
+
+    yPosition += 45;
+
+    // Audio File Information
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Audio File Information', margin, yPosition);
+    yPosition += lineHeight;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Duration: ${results.audioMetrics.duration}`, margin, yPosition);
+    yPosition += lineHeight;
+    doc.text(`Format: ${results.audioMetrics.format}`, margin, yPosition);
+    yPosition += lineHeight;
+    doc.text(`Quality: ${results.audioMetrics.quality}`, margin, yPosition);
+    yPosition += sectionSpacing;
+
+    // Medical Advice Section
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Medical Advice', margin, yPosition);
+    yPosition += lineHeight + 2;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const adviceLines = doc.splitTextToSize(results.advice.message, pageWidth - 2 * margin);
+    doc.text(adviceLines, margin, yPosition);
+    yPosition += (adviceLines.length * lineHeight) + sectionSpacing;
+
+    // Recommendations
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Recommendations:', margin, yPosition);
+    yPosition += lineHeight + 2;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    results.advice.recommendations.forEach((rec, index) => {
+      // Check if we need a new page
+      if (yPosition > pageHeight - 30) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.text(`• ${rec}`, margin + 5, yPosition);
+      yPosition += lineHeight + 2;
+    });
+
+    yPosition += sectionSpacing;
+
+    // Medical Disclaimer
+    if (yPosition > pageHeight - 40) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    doc.setFillColor(255, 243, 224);
+    doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 25, 3, 3, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(184, 134, 11);
+    doc.text('Medical Disclaimer', margin + 5, yPosition + 8);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    const disclaimerText = 'This analysis is for informational purposes only. Please consult with a qualified healthcare professional for proper medical diagnosis and treatment. This report should not replace professional medical consultation.';
+    const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin - 10);
+    doc.text(disclaimerLines, margin + 5, yPosition + 15);
+
+    // Footer
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `Page ${i} of ${totalPages} | CardioLink - Heartbeat Analysis Platform`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Generate filename
+    const filename = `Heartbeat_Analysis_${results.condition}_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    // Save the PDF
+    doc.save(filename);
   };
 
   const getProcessingMessage = () => {
@@ -361,104 +571,81 @@ const HeartbeatAnalyzer = () => {
               </div>
 
               {/* Primary Results */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <Heart className="w-6 h-6 mr-2 text-red-600" />
-                    Diagnosis
-                  </h3>
-                  <div className={`p-6 rounded-xl border-2 ${
-                    results.condition === 'Normal' 
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-                      : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'
-                  }`}>
-                    <div className={`text-3xl font-bold mb-2 ${
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                  <Heart className="w-6 h-6 mr-2 text-red-600" />
+                  Analysis Result
+                </h3>
+                <div className={`p-8 rounded-xl border-2 ${
+                  results.condition === 'Normal' 
+                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
+                    : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'
+                }`}>
+                  <div className="text-center">
+                    <div className={`text-4xl font-bold mb-4 ${
                       results.condition === 'Normal' ? 'text-green-700' : 'text-amber-700'
                     }`}>
                       {results.condition}
                     </div>
-                    <div className="text-gray-600 font-medium mb-2">
+                    <div className="text-gray-600 font-medium text-lg mb-6">
                       Confidence: {results.confidence}%
                     </div>
-                    <div className="text-sm text-gray-600">
-                      Rhythm: {results.analysis.rhythmType}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <AudioWaveform className="w-6 h-6 mr-2 text-blue-600" />
-                    Heart Rate
-                  </h3>
-                  <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                    <div className="text-3xl font-bold text-blue-700 mb-2">
-                      {results.bpm} BPM
-                    </div>
-                    <div className="text-blue-600 font-medium mb-2">
-                      Beats per minute
-                    </div>
-                    <div className="text-sm text-blue-600">
-                      S1/S2 Clarity: {results.analysis.s1s2Clarity}
+                    <div className="text-sm text-gray-500">
+                      <p><strong>Audio Duration:</strong> {results.audioMetrics.duration}</p>
+                      <p><strong>Format:</strong> {results.audioMetrics.format}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Detailed Analysis */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Detailed Audio Analysis</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Rhythm Type</h4>
-                    <div className="text-lg font-bold text-purple-700">{results.analysis.rhythmType}</div>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Murmur Detected</h4>
-                    <div className="text-lg font-bold text-pink-700">{results.analysis.murmurDetected}</div>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Sound Clarity</h4>
-                    <div className="text-lg font-bold text-green-700">{results.analysis.s1s2Clarity}</div>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
-                    <h4 className="font-bold text-gray-900 mb-2">Background Noise</h4>
-                    <div className="text-lg font-bold text-amber-700">{results.analysis.backgroundNoise}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Analysis Details */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+              {/* Medical Advice */}
+              <div className={`bg-white rounded-2xl shadow-lg border border-gray-100 p-6 ${
+                results.condition === 'Normal' 
+                  ? 'border-green-200' 
+                  : 'border-amber-200'
+              }`}>
                 <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                  <AlertCircle className="w-6 h-6 mr-2 text-blue-600" />
-                  Analysis Details
+                  <AlertCircle className={`w-6 h-6 mr-2 ${
+                    results.condition === 'Normal' ? 'text-green-600' : 'text-amber-600'
+                  }`} />
+                  Medical Advice
                 </h3>
                 <div className={`p-6 rounded-xl border ${
                   results.condition === 'Normal' 
                     ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200' 
                     : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'
                 }`}>
-                  <p className="text-gray-800 font-medium leading-relaxed mb-4">
-                    {results.details}
+                  <p className="text-gray-800 font-medium leading-relaxed mb-6 text-lg">
+                    {results.advice.message}
                   </p>
-                  <div className="text-sm text-gray-600">
-                    <p><strong>Audio Quality:</strong> {results.audioMetrics.quality}</p>
-                    <p><strong>Sample Rate:</strong> {results.audioMetrics.sampleRate}</p>
-                    <p><strong>Duration:</strong> {results.audioMetrics.duration}</p>
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-gray-900 mb-3">Recommendations:</h4>
+                    <ul className="space-y-2">
+                      {results.advice.recommendations.map((rec, index) => (
+                        <li key={index} className="flex items-start space-x-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                            results.condition === 'Normal' ? 'bg-blue-600' : 'bg-amber-600'
+                          }`}></div>
+                          <span className="text-gray-700">{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex space-x-4">
-                <button className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold rounded-xl hover:from-red-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                  <Volume2 className="w-5 h-5 mr-3" />
-                  Download Audio Report
+              <div className="flex justify-center space-x-4">
+                <button 
+                  onClick={generatePDFReport}
+                  className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <Download className="w-5 h-5 mr-3" />
+                  Download PDF Report
                 </button>
                 <button 
                   onClick={resetAnalysis}
-                  className="flex-1 flex items-center justify-center px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold rounded-xl hover:from-red-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   <Upload className="w-5 h-5 mr-3" />
                   Analyze Another File

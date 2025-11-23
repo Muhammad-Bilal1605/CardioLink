@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Upload, Play, Heart, CheckCircle, AlertCircle, Download, RotateCcw, Video, Zap, Brain, TrendingUp, Camera } from 'lucide-react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuthStore } from '../../store/authStore';
+import jsPDF from 'jspdf';
 
 const EchoAnalyzer = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -164,6 +165,276 @@ const EchoAnalyzer = () => {
     setIsProcessing(false);
     setProcessingStep(0);
     setProgress(0);
+  };
+
+  const generatePDFReport = () => {
+    if (!results) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 20;
+    const margin = 20;
+    const lineHeight = 7;
+    const sectionSpacing = 10;
+
+    // Colors
+    const primaryColor = [138, 43, 226]; // Purple
+    const errorColor = [220, 38, 38]; // Red
+    const successColor = [34, 197, 94]; // Green
+
+    // Header
+    if (results.error) {
+      doc.setFillColor(...errorColor);
+    } else {
+      doc.setFillColor(...primaryColor);
+    }
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Echocardiogram Analysis Report', margin, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Study ID: ${results.studyId}`, margin, 35);
+    doc.text(`Generated: ${new Date(results.timestamp).toLocaleString()}`, pageWidth - margin, 35, { align: 'right' });
+
+    yPosition = 50;
+    doc.setTextColor(0, 0, 0);
+
+    // Error Case
+    if (results.error) {
+      // Error Message Section
+      doc.setFillColor(254, 242, 242);
+      doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 30, 3, 3, 'F');
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...errorColor);
+      doc.text('Analysis Error', margin + 5, yPosition + 10);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      const errorDetails = doc.splitTextToSize(results.errorDetails || results.errorMessage, pageWidth - 2 * margin - 10);
+      doc.text(errorDetails, margin + 5, yPosition + 20);
+
+      yPosition += 40;
+
+      // Error Details
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Error Details:', margin, yPosition);
+      yPosition += lineHeight + 2;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const errorMessage = doc.splitTextToSize(results.errorMessage, pageWidth - 2 * margin);
+      doc.text(errorMessage, margin, yPosition);
+      yPosition += (errorMessage.length * lineHeight) + sectionSpacing;
+
+      // Troubleshooting Steps
+      if (results.recommendations && results.recommendations.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Troubleshooting Steps:', margin, yPosition);
+        yPosition += lineHeight + 2;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        results.recommendations.forEach((rec, index) => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(`${index + 1}. ${rec}`, margin + 5, yPosition);
+          yPosition += lineHeight + 2;
+        });
+      }
+    } else {
+      // Success Case - AI Analysis Results
+      
+      // Ejection Fraction Result
+      doc.setFillColor(239, 246, 255);
+      doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 50, 3, 3, 'F');
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Left Ventricular Ejection Fraction', margin + 5, yPosition + 12);
+      
+      doc.setFontSize(36);
+      doc.setTextColor(29, 78, 216);
+      doc.text(`${results.aiAnalysis.ejectionFraction.value}%`, margin + 5, yPosition + 30);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Normal range: ${results.aiAnalysis.ejectionFraction.range}`, margin + 5, yPosition + 38);
+      
+      // Status Badge
+      const statusText = results.aiAnalysis.ejectionFraction.status === 'normal' ? 'Normal' :
+                        results.aiAnalysis.ejectionFraction.status === 'mildly_reduced' ? 'Mildly Reduced' :
+                        'Reduced';
+      const statusColor = results.aiAnalysis.ejectionFraction.status === 'normal' ? [34, 197, 94] :
+                         results.aiAnalysis.ejectionFraction.status === 'mildly_reduced' ? [234, 179, 8] :
+                         [239, 68, 68];
+      
+      doc.setFillColor(...statusColor);
+      doc.roundedRect(pageWidth - margin - 50, yPosition + 20, 45, 12, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(statusText, pageWidth - margin - 27.5, yPosition + 28, { align: 'center' });
+
+      yPosition += 60;
+      doc.setTextColor(0, 0, 0);
+
+      // Clinical Information Grid
+      const gridY = yPosition;
+      
+      // Clinical Category
+      doc.setFillColor(250, 245, 255);
+      doc.roundedRect(margin, gridY, (pageWidth - 2 * margin) / 2 - 5, 30, 3, 3, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Clinical Category', margin + 5, gridY + 8);
+      doc.setFontSize(14);
+      doc.setTextColor(147, 51, 234);
+      doc.text(results.aiAnalysis.category, margin + 5, gridY + 18);
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      const categoryDesc = doc.splitTextToSize(results.aiAnalysis.description, (pageWidth - 2 * margin) / 2 - 15);
+      doc.text(categoryDesc, margin + 5, gridY + 25);
+
+      // AI Confidence
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(pageWidth / 2 + 5, gridY, (pageWidth - 2 * margin) / 2 - 5, 30, 3, 3, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AI Confidence', pageWidth / 2 + 10, gridY + 8);
+      doc.setFontSize(14);
+      doc.setTextColor(34, 197, 94);
+      doc.text(`${results.aiAnalysis.confidence}%`, pageWidth / 2 + 10, gridY + 18);
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Analysis reliability', pageWidth / 2 + 10, gridY + 25);
+
+      yPosition += 40;
+
+      // Risk Assessment
+      const severityColor = results.aiAnalysis.severity === 'low' ? [34, 197, 94] :
+                           results.aiAnalysis.severity === 'medium' ? [234, 179, 8] :
+                           [239, 68, 68];
+      const severityText = results.aiAnalysis.severity === 'low' ? 'Low Risk' :
+                           results.aiAnalysis.severity === 'medium' ? 'Medium Risk' :
+                           'High Risk';
+      
+      doc.setFillColor(...severityColor.map(c => c * 0.1));
+      doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 25, 3, 3, 'F');
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...severityColor);
+      doc.text('Risk Assessment', margin + 5, yPosition + 10);
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(severityText, margin + 5, yPosition + 20);
+
+      yPosition += 35;
+
+      // Video Information
+      if (results.videoMetrics) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Video File Information', margin, yPosition);
+        yPosition += lineHeight;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Duration: ${results.videoMetrics.duration}`, margin, yPosition);
+        yPosition += lineHeight;
+        doc.text(`Quality: ${results.videoMetrics.quality}`, margin, yPosition);
+        yPosition += lineHeight;
+        if (results.videoMetrics.format) {
+          doc.text(`Format: ${results.videoMetrics.format}`, margin, yPosition);
+          yPosition += lineHeight;
+        }
+        yPosition += sectionSpacing;
+      }
+
+      // Clinical Recommendations
+      if (results.recommendations && results.recommendations.length > 0) {
+        if (yPosition > pageHeight - 50) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Clinical Recommendations', margin, yPosition);
+        yPosition += lineHeight + 2;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        results.recommendations.forEach((rec, index) => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(`${index + 1}. ${rec}`, margin + 5, yPosition);
+          yPosition += lineHeight + 3;
+        });
+      }
+    }
+
+    yPosition += sectionSpacing;
+
+    // Medical Disclaimer
+    if (yPosition > pageHeight - 40) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    doc.setFillColor(255, 243, 224);
+    doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 30, 3, 3, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(184, 134, 11);
+    doc.text('Medical Disclaimer', margin + 5, yPosition + 8);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    const disclaimerText = 'This analysis is for informational purposes only. Please consult with a qualified healthcare professional for proper medical diagnosis and treatment. This report should not replace professional medical consultation. The AI analysis is provided as a tool to assist healthcare providers, not as a definitive diagnosis.';
+    const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin - 10);
+    doc.text(disclaimerLines, margin + 5, yPosition + 15);
+
+    // Footer
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `Page ${i} of ${totalPages} | CardioLink - ECHO Analysis Platform`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Generate filename
+    const statusPrefix = results.error ? 'ERROR' : 
+                        results.aiAnalysis?.ejectionFraction?.status === 'normal' ? 'NORMAL' :
+                        results.aiAnalysis?.ejectionFraction?.status === 'mildly_reduced' ? 'MILD' :
+                        'REDUCED';
+    const filename = `ECHO_Analysis_${statusPrefix}_${results.studyId}_${new Date(results.timestamp).toISOString().split('T')[0]}.pdf`;
+    
+    // Save the PDF
+    doc.save(filename);
   };
 
   const CurrentStepIcon = processingSteps[processingStep]?.icon || Video;
@@ -541,7 +812,10 @@ const EchoAnalyzer = () => {
 
                   {/* Action Buttons */}
                   <div className="flex space-x-4">
-                    <button className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <button 
+                      onClick={generatePDFReport}
+                      className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
                       <Download className="w-5 h-5 mr-3" />
                       Download ECHO Report
                     </button>
@@ -559,6 +833,13 @@ const EchoAnalyzer = () => {
               {/* Action Buttons for Error State */}
               {results.error && (
                 <div className="flex space-x-4">
+                  <button 
+                    onClick={generatePDFReport}
+                    className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <Download className="w-5 h-5 mr-3" />
+                    Download Error Report
+                  </button>
                   <button 
                     onClick={resetAnalysis}
                     className="flex-1 flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
